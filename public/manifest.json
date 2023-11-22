@@ -4,10 +4,10 @@
   "version": "1.0",
   "description": "Empower users to critically analyze news articles by presenting alternative perspectives.",
   "icons": {
-    "48": "icon.png",
-    "128": "icon.png"
+    "48": "logo192.png",
+    "128": "logo512.png"
   },
-  "browser_action": {
+  "action": {
     "default_icon": {
       "48": "icon.png",
       "128": "icon.png"
@@ -31,12 +31,15 @@
     }
   ],
   "web_accessible_resources": [
-    "content.js"
+    {
+      "resources": [
+        "content.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ],
-  "icons": {
-    "48": "icon.png",
-    "128": "icon.png"
-  },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   }
