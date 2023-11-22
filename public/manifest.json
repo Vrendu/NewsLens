@@ -5,25 +5,12 @@
   "description": "Empower users to critically analyze news articles by presenting alternative perspectives.",
   "action": {
     "default_icon": "icon.png",
-    "default_popup": "popup.html",
+    "default_popup": "index.html",
     "default_title": "NewsLens Extension"
   },
   "permissions": [
     "activeTab",
     "storage",
-    "webNavigation"
-  ],
-  "content_scripts": [
-    {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "main.js"
-      ] 
-    }
-  ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  }
+    "scripting"
+  ]
 }
