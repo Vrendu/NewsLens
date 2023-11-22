@@ -26,14 +26,14 @@
         "<all_urls>"
       ],
       "js": [
-        "content.js"
+        "index.js"
       ]
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
-        "content.js"
+        "index.js"
       ],
       "matches": [
         "<all_urls>"
