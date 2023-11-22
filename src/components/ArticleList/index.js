@@ -7,7 +7,7 @@ const ArticleList = () => {
     useEffect(() => {
         // Get the currently active tab
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const currentTab = tabs[0];
+            const currentTab = tabs[0].title;
             setCurrentTab(currentTab);
         });
     }, []);
