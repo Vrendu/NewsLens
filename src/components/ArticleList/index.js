@@ -7,7 +7,7 @@ const ArticleList = () => {
     useEffect(() => {
         // Get the currently active tab
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const currentTab = tabs[0].title;
+            const currentTab = tabs[0];
             setCurrentTab(currentTab);
         });
     }, []);
@@ -15,7 +15,7 @@ const ArticleList = () => {
     return (
         <div>
             <h2>Current Tab:</h2>
-            <pre>{JSON.stringify(currentTab, null, 2)}</pre>
+            <div>{JSON.stringify(currentTab, null, 2)}</div>
             {/* Add logic to retrieve and display articles from different sources */}
         </div>
     );
