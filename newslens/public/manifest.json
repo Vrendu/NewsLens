@@ -5,6 +5,29 @@
     "action": {
         "default_popup": "index.html"
     },
-    "permissions": ["scripting"],
-    "host_permissions": ["http://*/*", "https://*/*"]
+    "permissions": [
+        "scripting",
+        "storage"
+    ],
+    "host_permissions": [
+        "https://*.cnn.com/*",
+        "https://*.fox.com/*",
+        "https://*.msnbc.com/*",
+        "https://*.washingtonpost.com/*",
+        "https://*.nytimes.com/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "https://*.cnn.com/*",
+                "https://*.fox.com/*",
+                "https://*.msnbc.com/*",
+                "https://*.washingtonpost.com/*",
+                "https://*.nytimes.com/*"
+            ],
+            "js": [
+                "contentScript.js"
+            ]
+        }
+    ]
 }
