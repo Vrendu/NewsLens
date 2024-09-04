@@ -1,5 +1,7 @@
 .navbar {
-    background-color: #6146ea;
+    color-scheme: light dark;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #242424;
     padding: 10px 0;
 }
 
@@ -22,7 +24,7 @@
 }
 
 .nav-link {
-    color: #000000;
+    color: white;
     text-decoration: none;
     padding: 10px;
     transition: all 0.3s ease;
