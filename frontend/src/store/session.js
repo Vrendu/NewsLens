@@ -1,6 +1,6 @@
 
   import { csrfFetch } from "./csrf";
-
+  
   const SET_USER = "session/setUser";
   const REMOVE_USER = "session/removeUser";
 
@@ -31,12 +31,15 @@
     return response;
   };
 
-  export const restoreUser = () => async (dispatch) => {
-    const response = await csrfFetch("/api/session");
-    const data = await response.json();
-    dispatch(setUser(data.user));
-    return response;
-  };
+export const restoreUser = () => async (dispatch, getState) => {
+  const { session } = getState();
+  if (session.user) return; // If user is already authenticated, no need to restore
+  const response = await csrfFetch("/api/session");
+  const data = await response.json();
+  dispatch(setUser(data.user));
+  return response;
+};
+
 
   export const signup = (user) => async (dispatch) => {
     const { username, firstName, lastName, email, password } = user;
@@ -60,6 +63,7 @@
       method: 'DELETE',
     });
     dispatch(removeUser());
+
     return response;
   };
 

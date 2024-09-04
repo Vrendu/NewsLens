@@ -1,7 +1,7 @@
 //contentScript.js
 
 (() => {
-   // document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
         try {
             const title = document.title;
             const content = document.body.innerText.slice(0, 50000); // Get the first 50,000 characters
@@ -15,5 +15,5 @@
         } catch (error) {
             console.error('Error in content script:', error);
         }
-  //  });  
+   });  
 })();
