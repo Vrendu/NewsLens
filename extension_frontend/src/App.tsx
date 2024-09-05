@@ -29,7 +29,7 @@ function App() {
 
   
   const handleLogin = async () => {
-    const res = await fetch('/api/session', {
+    const res = await fetch('</localhost:8000>/api/session', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

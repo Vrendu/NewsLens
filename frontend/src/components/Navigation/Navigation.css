@@ -81,7 +81,7 @@
 
 /* Profile dropdown logout button */
 .profile-dropdown button {
-    background-color: #007bff;
+    background-color: #000509;
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -91,6 +91,3 @@
     transition: background-color 0.3s ease;
 }
 
-.profile-dropdown button:hover {
-    background-color: #0056b3;
-}

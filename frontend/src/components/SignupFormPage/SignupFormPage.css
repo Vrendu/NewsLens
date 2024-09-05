@@ -45,13 +45,8 @@
     border-radius: 4px;
     cursor: pointer;
 }
+*/
+.auth-form-button {
+    color: #010407;
+} 
 
-.form-container button:hover {
-    background-color: #0056b3;
-}
-
-.form-container p {
-    color: #ff0000;
-    margin-top: -10px;
-    margin-bottom: 20px;
-} */
