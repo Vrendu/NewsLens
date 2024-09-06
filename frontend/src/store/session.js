@@ -30,7 +30,7 @@ export const login = (user) => async (dispatch) => {
 
   // Sync with localStorage
   localStorage.setItem('user', JSON.stringify(data.user));
-  console.log("data.user", data.user);
+ 
 
   return response;
 };
@@ -79,7 +79,7 @@ export const logout = () => async (dispatch) => {
 
   // Clear localStorage on logout
   localStorage.removeItem('user');
-  console.log("removed user", localStorage.getItem('user'));
+  
   return response;
 };
 

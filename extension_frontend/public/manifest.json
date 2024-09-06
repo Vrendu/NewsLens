@@ -24,7 +24,8 @@
                 "https://*.fox.com/*",
                 "https://*.msnbc.com/*",
                 "https://*.washingtonpost.com/*",
-                "https://*.nytimes.com/*"
+                "https://*.nytimes.com/*",
+                "http://localhost:8000/*"
             ],
             "js": [
                 "contentScript.js"
