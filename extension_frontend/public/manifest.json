@@ -7,29 +7,21 @@
     },
     "permissions": [
         "scripting",
-        "storage"
+        "storage",
+        "tabs"
     ],
     "host_permissions": [
-        "https://*.cnn.com/*",
-        "https://*.fox.com/*",
-        "https://*.msnbc.com/*",
-        "https://*.washingtonpost.com/*",
-        "https://*.nytimes.com/*",
-        "http://localhost:8000/*"
+        "<all_urls>"
     ],
     "content_scripts": [
         {
             "matches": [
-                "https://*.cnn.com/*",
-                "https://*.fox.com/*",
-                "https://*.msnbc.com/*",
-                "https://*.washingtonpost.com/*",
-                "https://*.nytimes.com/*",
-                "http://localhost:8000/*"
+                "<all_urls>"
             ],
             "js": [
                 "contentScript.js"
-            ]
+            ],
+            "run_at": "document_end" 
         }
     ],
     "background": {

@@ -1,33 +1,21 @@
-// A
-
 import { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState<any>(null);
+  const [bias, setBias] = useState<{ bias?: string; agreeance?: string; totalVotes?: number; agreeRatio?: number; allsidesPage?: string } | string>('Loading...');
 
   // Fetch the news article from content script
   useEffect(() => {
     chrome.runtime.onMessage.addListener((message) => {
-      if (message.title && message.content) {
-        setTitle(message.title);
-        setContent(message.content);
+      if (message.action === 'biasResult') {
+        console.log('Bias Result:', message.bias);
+        setBias(message.bias); // Assuming message.bias is an object
       }
     });
   }, []);
-
-  // Reload tab function
-  const handleReload = () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0].id) {
-        chrome.tabs.reload(tabs[0].id);
-      }
-    });
-  };
 
   // Restore user from local storage and listen for storage changes
   useEffect(() => {
@@ -40,7 +28,7 @@ function App() {
 
     syncUser(); // Initial user fetch
 
-    // Listen for local storage
+    // Listen for local storage changes
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'sync' && changes.user) {
         if (changes.user.newValue) {
@@ -84,10 +72,6 @@ function App() {
         console.log('User saved to chrome.storage.sync:', data.user);
       });
 
-      // Sync with localStorage for web app
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      alert('Login successful!');
     } else {
       alert('Login failed: ' + JSON.stringify(data.errors));
     }
@@ -113,13 +97,13 @@ function App() {
         console.log('User removed from chrome.storage.sync');
       });
 
-      // Remove from localStorage for web app sync
-      localStorage.removeItem('user');
-
-      alert('Logged out successfully!');
     } else {
       alert('Logout failed.');
     }
+  };
+
+  const handleCheckBias = () => {
+    chrome.runtime.sendMessage({ action: 'checkBias' });
   };
 
   return (
@@ -129,6 +113,7 @@ function App() {
       {user ? (
         <div>
           <button onClick={handleLogout}>Logout</button>
+          <button onClick={handleCheckBias}>Check Bias</button>
         </div>
       ) : (
         <div>
@@ -149,15 +134,11 @@ function App() {
         </div>
       )}
 
-      <div className="card">
-        <button onClick={handleReload}>Reload</button>
-      </div>
-
       <div>
-        <h2>Title:</h2>
-        <p>{title}</p>
-        <h2>Content:</h2>
-        <p>{content}</p>
+        <h2>Bias</h2>
+        <p>
+          {typeof bias === 'string' ? bias : bias.bias || 'No bias data available'}
+        </p>
       </div>
     </>
   );
