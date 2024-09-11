@@ -1,5 +1,3 @@
-// background.js
-
 chrome.runtime.onMessage.addListener(async (message) => {
     if (message.action === 'checkBias') {
         chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -27,7 +25,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
                 // Process the biasData and find the bias for the URL's publication
                 const bias = determineBias(publication, biasData);
-                console.log(bias)
 
                 if (bias) {
                     chrome.runtime.sendMessage({
@@ -49,8 +46,10 @@ chrome.runtime.onMessage.addListener(async (message) => {
 });
 
 function determineBias(publication, biasData) {
+    const lowerCasePublication = publication.toLowerCase();
     for (const source of biasData) {
-        if (publication.includes(source.name)) {
+        const lowerCaseSourceName = source.name.toLowerCase();
+        if (lowerCaseSourceName.includes(lowerCasePublication) || lowerCasePublication.includes(lowerCaseSourceName)) {
             return {
                 bias: source.bias,
                 agreeance: source.agreeance_text,
@@ -66,5 +65,5 @@ function determineBias(publication, biasData) {
 function getPublication(url) {
     const urlObj = new URL(url);
     const domain = urlObj.hostname.replace("www.", "");
-    return "CNN Business";
+    return domain;
 }
