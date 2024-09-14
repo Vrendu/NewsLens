@@ -1,3 +1,5 @@
+// background.js
+
 // Define patterns for CNN sections: Business and general CNN news
 const domainPatterns = [
     // Matches URLs with a date or a word followed by business-related sections for CNN Business
@@ -66,11 +68,11 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 }
 
                 const biasData = await response.json();
-                console.log(biasData);
+               // console.log(biasData);
 
                 // Determine the bias for the matched publication
                 const bias = determineBias(publication, biasData);
-                console.log("bias: ", bias);
+                //console.log("bias: ", bias);
 
                 if (bias) {
                     chrome.runtime.sendMessage({
@@ -86,7 +88,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 }
 
             } catch (error) {
-                console.error("Error fetching bias data:", error);
+                //console.error("Error fetching bias data:", error);
                 chrome.runtime.sendMessage({
                     action: 'biasResult',
                     bias: 'Error fetching bias data'
@@ -95,6 +97,8 @@ chrome.runtime.onMessage.addListener(async (message) => {
         });
     }
 });
+
+
 
 // Function to determine bias from the fetched dataset
 function determineBias(publication, biasData) {

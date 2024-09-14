@@ -10,11 +10,17 @@ function App() {
 
   // Fetch the news article from content script
   useEffect(() => {
+    chrome.runtime.sendMessage({ action: 'checkBias' });
     chrome.runtime.onMessage.addListener((message) => {
       if (message.action === 'biasResult') {
-        console.log('Bias Result:', message.bias);
+        //console.log('Bias Result:', message.bias);
         setBias(message.bias); // Assuming message.bias is an object
         setPublication(message.bias.sourceName);
+      }
+
+      if (message.action === 'compareBias') {
+        console.log('Title:', message.title);
+        console.log('Meta Description:', message.metaDescription);
       }
     });
   }, []);
@@ -105,7 +111,8 @@ function App() {
   };
 
   const handleCheckBias = () => {
-    chrome.runtime.sendMessage({ action: 'checkBias' });
+    //chrome.runtime.sendMessage({ action: 'checkBias' });
+    //chrome.runtime.sendMessage({ action: 'compareBias'})
   };
 
   return (
