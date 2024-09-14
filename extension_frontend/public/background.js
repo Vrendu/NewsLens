@@ -1,6 +1,6 @@
 // Define patterns for CNN sections: Business and general CNN news
 const domainPatterns = [
-    // Matches URLs with a date or a word followed by business-related sections
+    // Matches URLs with a date or a word followed by business-related sections for CNN Business
     {
         pattern: /^https:\/\/www\.cnn\.com\/(\d{4}\/\d{2}\/\d{2}|[a-zA-Z]+)\/(business|investing|markets|media|tech|success|economy|companies)/,
         publication: "CNN Business"
@@ -10,8 +10,23 @@ const domainPatterns = [
         pattern: /^https:\/\/www\.cnn\.com/,
         publication: "CNN (Online News)"
     },
-
+    // Matches anything that comes after foxnews.com/opinion
+    {
+        pattern: /^https:\/\/www\.foxnews\.com\/opinion/,
+        publication: "Fox News (Opinion)"
+    },
+    // Matches anything that comes after foxbusiness.com
+    {
+        pattern: /^https:\/\/www\.foxbusiness\.com/,
+        publication: "Fox News Business"
+    },
+    // Matches any other URL that comes after foxnews.com
+    {
+        pattern: /^https:\/\/www\.foxnews\.com/,
+        publication: "Fox News (Online News)"
+    }
 ];
+
 
 // Function to match the URL to a specific publication
 function getPublication(url) {
