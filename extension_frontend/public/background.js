@@ -1,21 +1,50 @@
+// Define patterns for CNN sections: Business and general CNN news
+const domainPatterns = [
+    // Matches URLs with a date or a word followed by business-related sections
+    {
+        pattern: /^https:\/\/www\.cnn\.com\/(\d{4}\/\d{2}\/\d{2}|[a-zA-Z]+)\/(business|investing|markets|media|tech|success|economy|companies)/,
+        publication: "CNN Business"
+    },
+    // Matches any other cnn.com URL (non-business sections)
+    {
+        pattern: /^https:\/\/www\.cnn\.com/,
+        publication: "CNN (Online News)"
+    }
+];
+
+// Function to match the URL to a specific publication
+function getPublication(url) {
+    for (const { pattern, publication } of domainPatterns) {
+        if (pattern.test(url)) {
+            return publication;
+        }
+    }
+    return null;
+}
+
+// Listener to check the political bias of the current active tab
 chrome.runtime.onMessage.addListener(async (message) => {
     if (message.action === 'checkBias') {
+        // Get the active tab URL
         chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
             const activeTab = tabs[0];
             const url = activeTab.url;
 
-            // Logic to determine which news publication the URL belongs to
+            // Determine which news publication the URL belongs to (specific to CNN)
             const publication = getPublication(url);
 
             if (!publication) {
                 console.log('No publication found for the current URL');
+                chrome.runtime.sendMessage({
+                    action: 'biasResult',
+                    bias: 'No publication found for this URL'
+                });
                 return;
             }
 
-            // Fetch the bias data from AllSides
+            // Fetch the bias data from the AllSides dataset
             try {
-                const response = await fetch("https://storage.googleapis.com/kagglesdsdata/datasets/1491526/2641594/allsides.json?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=gcp-kaggle-com%40kaggle-161607.iam.gserviceaccount.com%2F20240910%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20240910T201409Z&X-Goog-Expires=259200&X-Goog-SignedHeaders=host&X-Goog-Signature=1d78418cacdc26d75a5e9f60dedd35ae6674ccd27933294e7d1d6e6b6db467b48df636a8c1cd02d9dd98e5fa02ef5497ccedc99c3a6629ff8c0b948f309ed33a415eab2e8448cdb38ea2154d2160f689601dd54fc7f3e3529c72a8f0169877bbbeba4632fc3b72f2d34cad27711043c5841b9caed724be075ac87d484f792e7256e4fe4891bc7956655bbdf5450160169f67e215177df94f15eb58f7d3a22e2926a3eef77525276135cdb5ff0cca03962a499ec493e49ec53050b1af170063851d746f5c7953ba8bc3d1fd5f4ea8913c6904b18ec59fd1459d4207ba822cc87703c5898c839511d4293a5d1831217a931a4fc632464f8b81f4603ec726299146");
-
+                const response = await fetch("https://storage.googleapis.com/kagglesdsdata/datasets/1491526/2641594/allsides.json?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=gcp-kaggle-com%40kaggle-161607.iam.gserviceaccount.com%2F20240914%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20240914T005736Z&X-Goog-Expires=259200&X-Goog-SignedHeaders=host&X-Goog-Signature=7693fce5165af3a2a4abb76dacb839a1547bb52c903f240fa1b84941eab9caac4afed4483172ee9e71eda97e07d6f630d2229aa43eeadf79bce2bdcd10b71ca1d49f566b6f551ee743e462923e113cdb4c3348d15b78baad4445d50a80edd4662d462863321348944013d899354718fd663e10f436f1623140dd081d5ea15768893e03cb22ff59085d55f00acd07ee0a073d13c917a7c5cdb5e0f25a959fa336b74596cadb2b7990b35a68f4c4bfa2d97b434c28511ed5f73539c383d46adf2a1130c0e1592e76ffb7de6e03c7b6af59b4309520fb67628e1fffd9f1a97891552c1158d9e98e624affb61d18cbd4a67f16bc64b5086dfb1418e0c12c025f44b8");
                 if (!response.ok) {
                     throw new Error("Failed to fetch bias data.");
                 }
@@ -23,7 +52,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 const biasData = await response.json();
                 console.log(biasData);
 
-                // Process the biasData and find the bias for the URL's publication
+                // Determine the bias for the matched publication
                 const bias = determineBias(publication, biasData);
 
                 if (bias) {
@@ -40,11 +69,16 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
             } catch (error) {
                 console.error("Error fetching bias data:", error);
+                chrome.runtime.sendMessage({
+                    action: 'biasResult',
+                    bias: 'Error fetching bias data'
+                });
             }
         });
     }
 });
 
+// Function to determine bias from the fetched dataset
 function determineBias(publication, biasData) {
     const lowerCasePublication = publication.toLowerCase();
     for (const source of biasData) {
@@ -60,10 +94,4 @@ function determineBias(publication, biasData) {
         }
     }
     return null;
-}
-
-function getPublication(url) {
-    const urlObj = new URL(url);
-    const domain = urlObj.hostname.replace("www.", "");
-    return domain;
 }
