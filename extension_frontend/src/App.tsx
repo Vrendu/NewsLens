@@ -6,6 +6,7 @@ function App() {
   const [password, setPassword] = useState('');
   const [user, setUser] = useState<any>(null);
   const [bias, setBias] = useState<{ bias?: string; agreeance?: string; totalVotes?: number; agreeRatio?: number; allsidesPage?: string } | string>('Loading...');
+  const [publication, setPublication] = useState('');
 
   // Fetch the news article from content script
   useEffect(() => {
@@ -13,6 +14,7 @@ function App() {
       if (message.action === 'biasResult') {
         console.log('Bias Result:', message.bias);
         setBias(message.bias); // Assuming message.bias is an object
+        setPublication(message.bias.sourceName);
       }
     });
   }, []);
@@ -20,9 +22,9 @@ function App() {
   // Restore user from local storage and listen for storage changes
   useEffect(() => {
     const syncUser = async () => {
-      const user = localStorage.getItem('user');
+      const user = chrome.storage.sync.get('user');
       if (user) {
-        setUser(JSON.parse(user));
+        setUser(user);
       }
     };
 
@@ -137,7 +139,7 @@ function App() {
       <div>
         <h2>Bias</h2>
         <p>
-          {typeof bias === 'string' ? bias : bias.bias || 'No bias data available'}
+          {typeof bias === 'string' ? bias : publication + " : " + bias.bias || 'No bias data available'}
         </p>
       </div>
     </>

@@ -9,7 +9,8 @@ const domainPatterns = [
     {
         pattern: /^https:\/\/www\.cnn\.com/,
         publication: "CNN (Online News)"
-    }
+    },
+
 ];
 
 // Function to match the URL to a specific publication
@@ -54,11 +55,13 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
                 // Determine the bias for the matched publication
                 const bias = determineBias(publication, biasData);
+                console.log("bias: ", bias);
 
                 if (bias) {
                     chrome.runtime.sendMessage({
                         action: 'biasResult',
-                        bias: bias
+                        bias: bias, 
+                        publication: publication
                     });
                 } else {
                     chrome.runtime.sendMessage({
@@ -89,7 +92,8 @@ function determineBias(publication, biasData) {
                 agreeance: source.agreeance_text,
                 totalVotes: source.total_votes,
                 agreeRatio: source.agree_ratio,
-                allsidesPage: source.allsides_page
+                allsidesPage: source.allsides_page,
+                sourceName: source.name
             };
         }
     }
