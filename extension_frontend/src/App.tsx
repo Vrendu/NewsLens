@@ -35,14 +35,6 @@ function App() {
     });
   };
 
-  // const handleReload = () => {
-  //   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  //     if (tabs[0].id) {
-  //       chrome.tabs.reload(tabs[0].id);
-  //     }
-  //   });
-  // };
-
   return (
     <>
       <h1>NewsLens</h1>
