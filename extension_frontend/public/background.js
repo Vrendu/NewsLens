@@ -52,7 +52,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
             const publication = getPublication(url);
 
             if (!publication) {
-                console.log('No publication found for the current URL');
+                //console.log('No publication found for the current URL');
                 chrome.runtime.sendMessage({
                     action: 'biasResult',
                     bias: 'No publication found for this URL'
@@ -96,17 +96,14 @@ chrome.runtime.onMessage.addListener(async (message) => {
             }
         });
     }
-    if (message.action === 'contentResult') {
-
-        console.log("message: ", message);
-
-        // Forward content result to the popup
-        chrome.runtime.sendMessage({
-            action: 'contentData',
-            title: message.title,
-            content: message.content
-        });
-    }
+    // else if (message.action === 'contentResult') {
+    //     // Forward content result to the popup (popup expects 'contentData')
+    //     chrome.runtime.sendMessage({
+    //         action: 'contentData',
+    //         title: message.title,
+    //         content: message.content
+    //     });
+    // }
 });
 
 
