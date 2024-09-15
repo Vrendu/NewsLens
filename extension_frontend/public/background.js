@@ -96,15 +96,28 @@ chrome.runtime.onMessage.addListener(async (message) => {
             }
         });
     }
-    // else if (message.action === 'contentResult') {
-    //     // Forward content result to the popup (popup expects 'contentData')
-    //     chrome.runtime.sendMessage({
-    //         action: 'contentData',
-    //         title: message.title,
-    //         content: message.content
-    //     });
-    // }
+    if (message.action === 'getPageContent') {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const activeTab = tabs[0];
+            chrome.scripting.executeScript({
+                target: { tabId: activeTab.id },
+                func: getPageContent
+            }, (results) => {
+                if (results && results[0] && results[0].result) {
+                    const { title, content } = results[0].result;
+                    chrome.runtime.sendMessage({ action: 'contentResult', title, content });
+                }
+            });
+        });
+    }
 });
+
+function getPageContent() {
+    return {
+        title: document.title,
+        content: document.body.innerText.slice(0, 10000) // Slice the first 10,000 characters
+    };
+}
 
 
 

@@ -4,13 +4,11 @@ import './App.css';
 function App() {
   const [bias, setBias] = useState<{ bias?: string; agreeance?: string; totalVotes?: number; agreeRatio?: number; allsidesPage?: string } | string>('Loading...');
   const [publication, setPublication] = useState('');
-  const [title, setTitle] = useState(null);
-  const [content, setContent] = useState(null);
+  const [title, setTitle] = useState<string | null>(null);
+  const [content, setContent] = useState<string | null>(null);
   const [showBias, setShowBias] = useState(true); // Toggle state for showing bias vs. title/content
 
-  // Fetch bias data and listen for incoming messages
   useEffect(() => {
-   // chrome.runtime.sendMessage({ action: 'getPageContent' }); 
     chrome.runtime.sendMessage({ action: 'checkBias' });
 
     chrome.runtime.onMessage.addListener((message) => {
@@ -18,37 +16,32 @@ function App() {
         setBias(message.bias);
         setPublication(message.bias.sourceName);
       }
-      else if (message.action === 'contentResult') {
+      if (message.action === 'contentResult') {
         setTitle(message.title);
         setContent(message.content);
       }
     });
   }, []);
 
-
-  // Handle switching between views and send message to get page content if showing Title & Content
   const toggleView = () => {
     setShowBias((prevShowBias) => {
       if (prevShowBias === true) {
         // If we are switching from Bias to Title & Content, request page content
-        chrome.runtime.sendMessage({ action: 'getPageContent' });
         if (!title && !content) {
-          handleReload();
+          chrome.runtime.sendMessage({ action: 'getPageContent' });
         }
-        //alert("Page content requested");
       }
       return !prevShowBias;
     });
   };
 
-  const handleReload = () => {
-    // just reload the current chrome tab
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0].id) {
-        chrome.tabs.reload(tabs[0].id);
-      }
-    });
-  };
+  // const handleReload = () => {
+  //   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  //     if (tabs[0].id) {
+  //       chrome.tabs.reload(tabs[0].id);
+  //     }
+  //   });
+  // };
 
   return (
     <>
