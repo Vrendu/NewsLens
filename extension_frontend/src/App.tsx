@@ -4,8 +4,9 @@ import './App.css';
 function App() {
   const [bias, setBias] = useState<{ bias?: string; agreeance?: string; totalVotes?: number; agreeRatio?: number; allsidesPage?: string } | string>('Loading...');
   const [publication, setPublication] = useState('');
-  const [title, setTitle] = useState<string | null>(null);
-  const [content, setContent] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  //const [searchResults, setSearchResults] = useState('dummy result');
   const [showBias, setShowBias] = useState(true); // Toggle state for showing bias vs. title/content
 
   useEffect(() => {
@@ -17,6 +18,7 @@ function App() {
         setPublication(message.bias.sourceName);
       }
       if (message.action === 'contentResult') {
+        //setSearchResults(message.searchResults);
         setTitle(message.title);
         setContent(message.content);
       }
@@ -55,9 +57,15 @@ function App() {
           </div>
         ) : (
           <div>
-            <h2>Title & Content</h2>
-            <p>Title: {title}</p>
-            <p>Content: {content}</p>
+            {/* {searchResults && 
+              <p>Search Results: {JSON.stringify(searchResults)}</p>
+            } */}
+
+            <h2>Title</h2>
+            <p>{title}</p>
+
+            <h2>Content</h2>
+            <p>{content}</p>
             {/* <button onClick={handleReload}> Reload web page</button> */}
           </div>
         )}
