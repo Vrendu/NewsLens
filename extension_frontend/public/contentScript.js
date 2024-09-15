@@ -1,22 +1,17 @@
 // contentScript.js
 
 chrome.runtime.onMessage.addListener((message) => {
-    
     if (message.action === 'checkBias') {
-        // Extract the title of the page
-        const title = document.title;
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+            const title = tabs[0].title;
+            const content = tabs[0].innerHTML;
 
-        // Extract meta description from the page
-        const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
-
-        console.log("Title:", title);
-        console.log("Meta Description:", metaDescription);
-
-        // Send the extracted data back to the background script
-        chrome.runtime.sendMessage({
-            action: 'compareBias',
-            title: title,
-            metaDescription: metaDescription
+            chrome.runtime.sendMessage({ action: 'contentResult', title: title, content: content });
         });
     }
-});
+})
+
+
+       
+
+

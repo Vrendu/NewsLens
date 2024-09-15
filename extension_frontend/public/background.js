@@ -96,6 +96,17 @@ chrome.runtime.onMessage.addListener(async (message) => {
             }
         });
     }
+    if (message.action === 'contentResult') {
+
+        console.log("message: ", message);
+
+        // Forward content result to the popup
+        chrome.runtime.sendMessage({
+            action: 'contentData',
+            title: message.title,
+            content: message.content
+        });
+    }
 });
 
 
