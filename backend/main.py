@@ -12,11 +12,12 @@ class QueryRequest(BaseModel):
 
 @app.post("/search")
 async def search_articles(query: QueryRequest):
-    title = query.title
-    content = query.content
+    # title = query.title
+    # content = query.content
     # Integrate with Common Crawl or other search APIs here
     # Example of performing a search query
-    results = await perform_search(title, content)
+    print(f"Received title: {query.title}, content: {query.content}")
+    results = await perform_search(query.title, query.content)
     return results
 
 

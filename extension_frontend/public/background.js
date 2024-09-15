@@ -106,6 +106,25 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 if (results && results[0] && results[0].result) {
                     const { title, content } = results[0].result;
                     chrome.runtime.sendMessage({ action: 'contentResult', title, content });
+                    console.log("Title: ", title);
+                    console.log("Content: ", content);
+                    // Send the title and content to the FastAPI server /search endpoint
+                    fetch('http://127.0.0.1:8000/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ title, content }) // Stringify the body here
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log(data);
+                            chrome.runtime.sendMessage({ action: 'contentResult', results: data });
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+
                 }
             });
         });

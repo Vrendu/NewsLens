@@ -4,10 +4,8 @@ import './App.css';
 function App() {
   const [bias, setBias] = useState<{ bias?: string; agreeance?: string; totalVotes?: number; agreeRatio?: number; allsidesPage?: string } | string>('Loading...');
   const [publication, setPublication] = useState('');
-  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  //const [searchResults, setSearchResults] = useState('dummy result');
-  const [showBias, setShowBias] = useState(true); // Toggle state for showing bias vs. title/content
+  const [showBias, setShowBias] = useState(true); 
 
   useEffect(() => {
     chrome.runtime.sendMessage({ action: 'checkBias' });
@@ -18,9 +16,7 @@ function App() {
         setPublication(message.bias.sourceName);
       }
       if (message.action === 'contentResult') {
-        //setSearchResults(message.searchResults);
-        setTitle(message.title);
-        setContent(message.content);
+        setContent(message.results || 'No content available');
       }
     });
   }, []);
@@ -28,8 +24,7 @@ function App() {
   const toggleView = () => {
     setShowBias((prevShowBias) => {
       if (prevShowBias === true) {
-        // If we are switching from Bias to Title & Content, request page content
-        if (!title && !content) {
+        if (!content) {
           chrome.runtime.sendMessage({ action: 'getPageContent' });
         }
       }
@@ -41,7 +36,6 @@ function App() {
     <>
       <h1>NewsLens</h1>
 
-      {/* Toggle button */}
       <button onClick={toggleView}>
         {showBias ? 'Comparison' : 'Bias Data'}
       </button>
@@ -57,16 +51,8 @@ function App() {
           </div>
         ) : (
           <div>
-            {/* {searchResults && 
-              <p>Search Results: {JSON.stringify(searchResults)}</p>
-            } */}
-
-            <h2>Title</h2>
-            <p>{title}</p>
-
-            <h2>Content</h2>
-            <p>{content}</p>
-            {/* <button onClick={handleReload}> Reload web page</button> */}
+              <h2>Content</h2>
+              <p>{JSON.stringify(content)}</p>
           </div>
         )}
       </div>
