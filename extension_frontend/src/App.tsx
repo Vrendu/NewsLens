@@ -16,7 +16,7 @@ function App() {
         setPublication(message.bias.sourceName);
       }
       if (message.action === 'contentResult') {
-        setContent(message.results || 'No content available');
+        setContent(message.results?.search_results || 'Server error, please try again later.');
       }
     });
   }, []);
@@ -47,6 +47,14 @@ function App() {
             <h2>Bias</h2>
             <p>
               {typeof bias === 'string' ? bias : publication + " : " + bias.bias || 'No bias data available'}
+              <br />
+              {typeof bias === 'string' ? '' : ' (' + bias.agreeance + ' - ' + bias.agreeRatio?.toPrecision(3) + '%)' }
+              <br />
+              {typeof bias === 'string' ? '' : ' Total vote: ' + bias.totalVotes}
+              <br />
+              
+
+
             </p>
           </div>
         ) : (

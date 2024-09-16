@@ -1,6 +1,6 @@
 // background.js
 
-// Define patterns for CNN sections: Business and general CNN news
+
 const domainPatterns = [
     // Matches URLs with a date or a word followed by business-related sections for CNN Business
     {
@@ -68,11 +68,11 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 }
 
                 const biasData = await response.json();
-               // console.log(biasData);
+               
 
                 // Determine the bias for the matched publication
                 const bias = determineBias(publication, biasData);
-                //console.log("bias: ", bias);
+                console.log("bias: ", bias);
 
                 if (bias) {
                     chrome.runtime.sendMessage({
@@ -106,8 +106,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 if (results && results[0] && results[0].result) {
                     const { title, content } = results[0].result;
                     chrome.runtime.sendMessage({ action: 'contentResult', title, content });
-                    console.log("Title: ", title);
-                    console.log("Content: ", content);
+                    
                     // Send the title and content to the FastAPI server /search endpoint
                     fetch('http://127.0.0.1:8000/search', {
                         method: 'POST',

@@ -16,7 +16,7 @@ async def search_articles(query: QueryRequest):
     # content = query.content
     # Integrate with Common Crawl or other search APIs here
     # Example of performing a search query
-    print(f"Received title: {query.title}, content: {query.content}")
+    #print(f"Received title: {query.title}, content: {query.content}")
     results = await perform_search(query.title, query.content)
     return results
 
