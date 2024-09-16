@@ -105,25 +105,26 @@ chrome.runtime.onMessage.addListener(async (message) => {
             }, (results) => {
                 if (results && results[0] && results[0].result) {
                     const { title, content } = results[0].result;
-                    chrome.runtime.sendMessage({ action: 'contentResult', title, content });
-                    
-                    // Send the title and content to the FastAPI server /search endpoint
+
+                    // Extract keywords from the content
+                    const keywords = extractKeywords(content);
+                    chrome.runtime.sendMessage({ action: 'contentResult', title, keywords });
+
+                    // Send the keywords and title to the backend instead of the entire content
                     fetch('http://127.0.0.1:8000/search', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ title, content }) // Stringify the body here
+                        body: JSON.stringify({ title, keywords })  // Send title and keywords
                     })
                         .then(response => response.json())
                         .then(data => {
-                            console.log(data);
                             chrome.runtime.sendMessage({ action: 'contentResult', results: data });
                         })
                         .catch(error => {
                             console.error('Error:', error);
                         });
-
                 }
             });
         });
@@ -136,7 +137,26 @@ function getPageContent() {
         content: document.body.innerText.slice(0, 10000) // Slice the first 10,000 characters
     };
 }
+function extractKeywords(text) {
+    const words = text.toLowerCase().match(/\b\w+\b/g); // Match all words
+    const wordFreq = {};
 
+    // Count word frequencies
+    words.forEach(word => {
+        wordFreq[word] = (wordFreq[word] || 0) + 1;
+    });
+
+    // Define common stop words to exclude
+    const stopWords = ["the", "and", "or", "but", "if", "with", "in", "of", "on", "to", "for", "is", "it", "this"];
+
+    // Get the top 10 most frequent words, excluding stop words
+    const sortedWords = Object.entries(wordFreq)
+        .filter(([word]) => !stopWords.includes(word))  // Filter out stop words
+        .sort(([, a], [, b]) => b - a)  // Sort by frequency
+        .slice(0, 10);  // Take top 10 words
+
+    return sortedWords.map(([word]) => word);  // Return just the keywords
+}
 
 
 // Function to determine bias from the fetched dataset

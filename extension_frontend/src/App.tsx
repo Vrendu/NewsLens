@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 
+// Define the structure of a URL item
+interface UrlItem {
+  url: string;
+  source: string;
+  date: string;
+}
+
 function App() {
   const [bias, setBias] = useState<{ bias?: string; agreeance?: string; totalVotes?: number; agreeRatio?: number; allsidesPage?: string } | string>('Loading...');
   const [publication, setPublication] = useState('');
-  const [content, setContent] = useState('');
-  const [showBias, setShowBias] = useState(true); 
+  const [urls, setUrls] = useState<UrlItem[]>([]);  // Array of UrlItems
+  const [showBias, setShowBias] = useState(true);
 
   useEffect(() => {
     chrome.runtime.sendMessage({ action: 'checkBias' });
@@ -16,7 +23,7 @@ function App() {
         setPublication(message.bias.sourceName);
       }
       if (message.action === 'contentResult') {
-        setContent(message.results?.search_results || 'Server error, please try again later.');
+        setUrls(message.results || []);  // Set URLs from the backend
       }
     });
   }, []);
@@ -24,7 +31,7 @@ function App() {
   const toggleView = () => {
     setShowBias((prevShowBias) => {
       if (prevShowBias === true) {
-        if (!content) {
+        if (!urls.length) {
           chrome.runtime.sendMessage({ action: 'getPageContent' });
         }
       }
@@ -41,26 +48,29 @@ function App() {
       </button>
 
       <div>
-        {/* Conditionally render based on the toggle state */}
         {showBias ? (
           <div>
             <h2>Bias</h2>
             <p>
               {typeof bias === 'string' ? bias : publication + " : " + bias.bias || 'No bias data available'}
               <br />
-              {typeof bias === 'string' ? '' : ' (' + bias.agreeance + ' - ' + bias.agreeRatio?.toPrecision(3) + '%)' }
+              {typeof bias === 'string' ? '' : ' (' + bias.agreeance + ' - ' + bias.agreeRatio?.toPrecision(3) + '%)'}
               <br />
               {typeof bias === 'string' ? '' : ' Total vote: ' + bias.totalVotes}
-              <br />
-              
-
-
             </p>
           </div>
         ) : (
           <div>
-              <h2>Content</h2>
-              <p>{JSON.stringify(content)}</p>
+            <h2>Related Articles</h2>
+            <ul>
+              {urls.map((item, index) => (
+                <li key={index}>
+                  <a href={item.url} target="_blank" rel="noopener noreferrer">
+                    {item.url} - {item.source} (Date: {item.date})
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
