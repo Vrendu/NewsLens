@@ -4,4 +4,4 @@ node_modules
 build
 .DS_Store
 *.db
-backend/service-account.json
+backend/service_account.json
