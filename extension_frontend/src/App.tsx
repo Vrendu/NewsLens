@@ -62,15 +62,19 @@ function App() {
         ) : (
           <div>
             <h2>Related Articles</h2>
-            <ul>
-              {urls.map((item, index) => (
-                <li key={index}>
-                  <a href={item.url} target="_blank" rel="noopener noreferrer">
-                    {item.url} - {item.source} (Date: {item.date})
-                  </a>
-                </li>
-              ))}
-            </ul>
+            {urls.length === 0 ? (  // Check if the URLs array is empty and display "Loading..."
+              <p>Loading...</p>
+            ) : (
+              <ul>
+                {urls.map((item, index) => (
+                  <li key={index}>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      {item.url} - {item.source} (Date: {item.date})
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </div>
