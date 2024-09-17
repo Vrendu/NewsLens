@@ -100,29 +100,33 @@ chrome.runtime.onMessage.addListener(async (message) => {
             const activeTab = tabs[0];
             chrome.scripting.executeScript({
                 target: { tabId: activeTab.id },
-                func: getPageContent
+                func: getPageContent,
             }, (results) => {
                 if (results && results[0] && results[0].result) {
                     const { title, content } = results[0].result;
-
-                    // Extract keywords from the content
                     const keywords = extractKeywords(content);
                     chrome.runtime.sendMessage({ action: 'contentResult', title, keywords });
 
-                    // Send the keywords and title to the backend instead of the entire content
                     fetch('http://127.0.0.1:8000/search', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ title, keywords })  // Send title and keywords
+                        body: JSON.stringify({ title, keywords }) // Make sure keywords is an array
                     })
                         .then(response => response.json())
                         .then(data => {
-                            chrome.runtime.sendMessage({ action: 'contentResult', results: data });
+                            // Ensure data is an array before sending it
+                            if (Array.isArray(data)) {
+                                chrome.runtime.sendMessage({ action: 'contentResult', results: data });
+                            } else {
+                                console.error('Expected array, received:', data);
+                                chrome.runtime.sendMessage({ action: 'contentResult', results: [] });
+                            }
                         })
                         .catch(error => {
                             console.error('Error:', error);
+                            chrome.runtime.sendMessage({ action: 'contentResult', results: [] });
                         });
                 }
             });
