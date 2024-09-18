@@ -1,66 +1,49 @@
-from google.cloud import bigquery
+import sqlite3
+import re  # For matching URL patterns
 from fastapi import FastAPI
 from pydantic import BaseModel
-from dotenv import load_dotenv
 
 app = FastAPI()
 
-# Load environment variables from .env file
-load_dotenv()
-
 
 class QueryRequest(BaseModel):
-    title: str
-    keywords: list[str]  # Expect a list of keywords
+    url: str  # Expect the tab URL from background.js
 
 
-@app.post("/search")
-async def search_articles(query: QueryRequest):
-    # Combine keywords to create a search query
-    search_query = " ".join(query.keywords)
-    results = perform_search(search_query)
-    print(results)
-    return results
+@app.post("/check_bias")
+async def check_bias(query: QueryRequest):
+    url = query.url
 
+    # Connect to the SQLite database
+    conn = sqlite3.connect("allsides_data.db")
+    cursor = conn.cursor()
 
-def perform_search(search_query: str):
-    # Initialize the BigQuery client
-    client = bigquery.Client()
-
-    # Split search_query into individual keywords
-    keywords = search_query.split()
-
-    # Build SQL query using keywords in the V2Themes or V2Persons field
-    keyword_clauses = " OR ".join(
-        [f"LOWER(V2Themes) LIKE '%{keyword}%'" for keyword in keywords]
+    # Query the database for all URL patterns
+    cursor.execute(
+        "SELECT name, bias, total_votes, agree, disagree, agree_ratio, agreeance_text, allsides_page, url_pattern FROM bias_data"
     )
+    rows = cursor.fetchall()
+    conn.close()
 
-    # Build the final SQL query to find relevant articles in GDELT
-    query = f"""
-    SELECT
-      DATE,
-      SourceCommonName,
-      DocumentIdentifier
-    FROM
-      `gdelt-bq.gdeltv2.gkg`
-    WHERE
-      ({keyword_clauses})
-      AND SourceCommonName IS NOT NULL
-    ORDER BY
-      DATE DESC
-    LIMIT 10
-    """
+    # Try to match the URL against each pattern in the database
+    matched_data = None
+    for row in rows:
+        pattern = row[8]  # url_pattern column
+        if pattern and re.match(pattern, url):
+            matched_data = {
+                "name": row[0],
+                "bias": row[1],
+                "total_votes": row[2],
+                "agree": row[3],
+                "disagree": row[4],
+                "agree_ratio": row[5],
+                "agreeance_text": row[6],
+                "allsides_page": row[7],
+            }
+            break
 
-    # Execute the query
-    query_job = client.query(query)
-    results = query_job.result()
-
-    # Return URLs, sources, and dates from the query result
-    return [
-        {
-            "url": row.DocumentIdentifier,
-            "source": row.SourceCommonName,
-            "date": row.DATE,
-        }
-        for row in results
-    ]
+    # Return the matched bias data if found
+    if matched_data:
+        return matched_data
+    else:
+        return {"bias": f"No bias information found for {url}"}

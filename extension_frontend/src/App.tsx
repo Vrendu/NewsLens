@@ -1,82 +1,54 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 
-// Define the structure of a URL item
-interface UrlItem {
-  url: string;
-  source: string;
-  date: string;
+// Define the structure of the bias data
+interface BiasData {
+  name: string;
+  bias: string;
+  agree: number;
+  disagree: number;
+  agree_ratio: number;
+  allsides_page: string;
 }
 
 function App() {
-  const [bias, setBias] = useState<{ bias?: string; agreeance?: string; totalVotes?: number; agreeRatio?: number; allsidesPage?: string } | string>('Loading...');
+  const [bias, setBias] = useState<BiasData | string>('Loading...');
   const [publication, setPublication] = useState('');
-  const [urls, setUrls] = useState<UrlItem[]>([]);  // Array of UrlItems
-  const [showBias, setShowBias] = useState(true);
 
   useEffect(() => {
     chrome.runtime.sendMessage({ action: 'checkBias' });
 
     chrome.runtime.onMessage.addListener((message) => {
       if (message.action === 'biasResult') {
-        setBias(message.bias);
-        setPublication(message.bias.sourceName);
-      }
-      if (message.action === 'contentResult') {
-        setUrls(message.results || []);  // Set URLs from the backend
+        if (typeof message.bias === 'string') {
+          setBias(message.bias); // If it's an error or message string
+        } else {
+          setBias(message.bias);
+          setPublication(message.bias.name);
+        }
       }
     });
   }, []);
-
-  const toggleView = () => {
-    setShowBias((prevShowBias) => {
-      if (prevShowBias === true) {
-        if (!urls.length) {
-          chrome.runtime.sendMessage({ action: 'getPageContent' });
-        }
-      }
-      return !prevShowBias;
-    });
-  };
 
   return (
     <>
       <h1>NewsLens</h1>
 
-      <button onClick={toggleView}>
-        {showBias ? 'Comparison' : 'Bias Data'}
-      </button>
-
       <div>
-        {showBias ? (
-          <div>
-            <h2>Bias</h2>
-            <p>
-              {typeof bias === 'string' ? bias : publication + " : " + bias.bias || 'No bias data available'}
-              <br />
-              {typeof bias === 'string' ? '' : ' (' + bias.agreeance + ' - ' + bias.agreeRatio?.toPrecision(3) + '%)'}
-              <br />
-              {typeof bias === 'string' ? '' : ' Total vote: ' + bias.totalVotes}
-            </p>
-          </div>
-        ) : (
-          <div>
-            <h2>Related Articles</h2>
-            {urls.length === 0 ? (  // Check if the URLs array is empty and display "Loading..."
-              <p>Loading...</p>
-            ) : (
-              <ul>
-                {urls.map((item, index) => (
-                  <li key={index}>
-                    <a href={item.url} target="_blank" rel="noopener noreferrer">
-                      {item.url} - {item.source} (Date: {item.date})
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        <h2>Bias</h2>
+        <p>
+          {typeof bias === 'string' ? bias : `${publication} : ${bias.bias}`}
+          <br />
+          {typeof bias === 'string' ? '' : `Agree: ${bias.agree}, Disagree: ${bias.disagree}`}
+          <br />
+          {typeof bias === 'string' ? '' : `Agree Ratio: ${(bias.agree_ratio * 100).toFixed(2)}%`}
+          <br />
+          {typeof bias === 'string' ? '' : (
+            <a href={bias.allsides_page} target="_blank" rel="noopener noreferrer">
+              AllSides Page
+            </a>
+          )}
+        </p>
       </div>
     </>
   );
