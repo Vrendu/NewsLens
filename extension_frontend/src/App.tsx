@@ -9,6 +9,7 @@ interface BiasData {
   disagree: number;
   agree_ratio: number;
   allsides_page: string;
+  total_votes: number;
 }
 
 function App() {
@@ -35,17 +36,19 @@ function App() {
       <h1>NewsLens</h1>
 
       <div>
-        <h2>Bias</h2>
+        <h2>AllSides Bias</h2>
         <p>
           {typeof bias === 'string' ? bias : `${publication} : ${bias.bias}`}
           <br />
+          {typeof bias === 'string' ? '' : `Total Votes: ${bias.total_votes}`}
+          <br />
           {typeof bias === 'string' ? '' : `Agree: ${bias.agree}, Disagree: ${bias.disagree}`}
           <br />
-          {typeof bias === 'string' ? '' : `Agree Ratio: ${(bias.agree_ratio * 100).toFixed(2)}%`}
+          {typeof bias === 'string' ? '' : `Agree Ratio: ${(bias.agree_ratio).toFixed(2)}`}
           <br />
           {typeof bias === 'string' ? '' : (
             <a href={bias.allsides_page} target="_blank" rel="noopener noreferrer">
-              AllSides Page
+              Read More...
             </a>
           )}
         </p>
