@@ -1,5 +1,3 @@
-//background.js
-
 // Listener to check the political bias of the current active tab
 chrome.runtime.onMessage.addListener(async (message) => {
     if (message.action === 'checkBias') {
@@ -16,14 +14,18 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 return;
             }
 
-            // Fetch the bias data from the FastAPI backend using the tab URL
+            // Extract domain name
+            const domain = new URL(url).hostname;
+            console.log(domain);
+
+            // Fetch the bias data from the FastAPI backend using the domain name
             try {
-                const response = await fetch('http://127.0.0.1:8000/check_bias', {
+                const response = await fetch('http://127.0.0.1:8000/check_bias_data', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ url }) // Send the URL to the backend
+                    body: JSON.stringify({ domain }) // Send the domain to the backend
                 });
 
                 if (!response.ok) {
@@ -33,16 +35,16 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 const biasData = await response.json();
 
                 // Send the retrieved bias data to the frontend
-                if (biasData.name) {
+                if (biasData.data.length > 0) {
                     chrome.runtime.sendMessage({
                         action: 'biasResult',
-                        bias: biasData,
-                        publication: biasData.name
+                        bias: biasData.data[0],  // Send the first matched result
+                        publication: biasData.data[0].name
                     });
                 } else {
                     chrome.runtime.sendMessage({
                         action: 'biasResult',
-                        bias: biasData.bias || 'No bias data available'
+                        bias: 'No bias data available for this domain'
                     });
                 }
 

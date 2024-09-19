@@ -15,7 +15,7 @@ app = FastAPI()
 load_dotenv()
 
 # PostgreSQL connection details from .env
-DATABASE_URL = os.getenv("DATABASE_URL")  
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # GDELT base URL for GKG files from .env
 GDELT_BASE_URL = os.getenv("GDELT_BASE_URL")
@@ -167,6 +167,11 @@ async def update_gdelt_data(background_tasks: BackgroundTasks):
 # -------------------- MBFC Data Handling --------------------
 
 
+# Define a Pydantic model for the domain request
+class DomainRequest(BaseModel):
+    domain: str
+
+
 # Fetch full MBFC dataset
 def fetch_mbfc_data():
     headers = {
@@ -222,6 +227,30 @@ def update_mbfc_data():
 async def update_data(background_tasks: BackgroundTasks):
     background_tasks.add_task(update_mbfc_data)
     return {"message": "MBFC data update has been triggered in the background."}
+
+
+# Route to check bias data based on the domain
+@app.post("/check_bias_data")
+async def check_bias_data(request: DomainRequest):
+    conn = psycopg2.connect(DATABASE_URL)
+    cursor = conn.cursor()
+
+    domain = request.domain
+
+    cursor.execute(
+        """
+    SELECT name, bias
+    FROM mbfc_data
+    WHERE domain = REGEXP_REPLACE(%s, '^www\\.', '')
+    """,
+        (domain,),
+    )
+
+    data = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return {"data": [{"name": row[0], "bias": row[1]} for row in data]}
 
 
 # -------------------- Startup Event --------------------
