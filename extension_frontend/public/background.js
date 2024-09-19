@@ -1,3 +1,5 @@
+//background.js
+
 // Listener to check the political bias of the current active tab
 chrome.runtime.onMessage.addListener(async (message) => {
     if (message.action === 'checkBias') {

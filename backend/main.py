@@ -1,20 +1,31 @@
-import psycopg2  # PostgreSQL adapter for Python
-import csv
 import os
+import time
+import psycopg2
 import requests
 import zipfile
+import pandas as pd
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
-import pandas as pd
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
 app = FastAPI()
 
-# PostgreSQL connection details
-DATABASE_URL = "postgresql://postgres:yourpassword@localhost:5432/newslens_db"  # Update your password here
+# Load environment variables from .env file
+load_dotenv()
 
-# GDELT base URL for GKG files
-GDELT_BASE_URL = "http://data.gdeltproject.org/gdeltv2/"
+# PostgreSQL connection details from .env
+DATABASE_URL = os.getenv("DATABASE_URL")  
+
+# GDELT base URL for GKG files from .env
+GDELT_BASE_URL = os.getenv("GDELT_BASE_URL")
+
+# MBFC API details from .env
+MBFC_API_URL = os.getenv("MBFC_API_URL")
+BEARER_TOKEN = os.getenv("BEARER_TOKEN")
+
+
+# -------------------- GDELT Data Handling --------------------
 
 
 # Download GDELT files for the past 3 days
@@ -25,27 +36,39 @@ def download_gdelt_files(days=3):
     past_days = now - timedelta(days=days)
 
     current_time = past_days
+    retries = 3  # Number of retries in case of failure
+
     while current_time <= now:
         file_name = current_time.strftime("%Y%m%d%H%M00.gkg.csv.zip")
         url = GDELT_BASE_URL + file_name
-        print(f"Downloading {url}")
+        print(f"Attempting to download {url}")
 
-        response = requests.get(url)
-        if response.status_code == 200:
-            zip_file_path = f"gdelt_data/{file_name}"
+        for attempt in range(retries):
+            try:
+                response = requests.get(url)
+                if response.status_code == 200:
+                    zip_file_path = f"gdelt_data/{file_name}"
 
-            # Save the zip file
-            with open(zip_file_path, "wb") as file:
-                file.write(response.content)
+                    # Save the zip file
+                    with open(zip_file_path, "wb") as file:
+                        file.write(response.content)
 
-            # Unzip the file
-            with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
-                zip_ref.extractall("gdelt_data")
+                    # Unzip the file
+                    with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
+                        zip_ref.extractall("gdelt_data")
 
-            # Remove the zip file after extracting
-            os.remove(zip_file_path)
-        else:
-            print(f"File not found: {url}")
+                    # Remove the zip file after extracting
+                    os.remove(zip_file_path)
+                    print(f"Downloaded and extracted: {file_name}")
+                    break
+                else:
+                    print(f"File not found: {url} (Attempt {attempt + 1})")
+                    time.sleep(2)  # Wait before retrying
+
+            except Exception as e:
+                print(f"Error downloading {url}: {e}")
+                if attempt + 1 == retries:
+                    print(f"Failed to download {url} after {retries} attempts")
 
         current_time += timedelta(hours=1)
 
@@ -82,13 +105,9 @@ def parse_and_store_gdelt_data():
                 csv_file_path,
                 sep="\t",
                 header=None,
-                usecols=[
-                    0,
-                    2,
-                    7,
-                ],  # Columns: V1Date (col 0), DocumentIdentifier (col 2), V2Themes (col 7)
+                usecols=[0, 2, 7],
                 names=col_names,
-                error_bad_lines=False,  # Skip lines with errors
+                on_bad_lines="skip",  # Skip lines with errors
             )
 
             # Convert V1Date to a proper timestamp and filter out missing entries
@@ -145,90 +164,109 @@ async def update_gdelt_data(background_tasks: BackgroundTasks):
     }
 
 
-# Function to load AllSides CSV data into the PostgreSQL database (unchanged)
-def load_allsides_data():
+# -------------------- MBFC Data Handling --------------------
+
+
+# Fetch full MBFC dataset
+def fetch_mbfc_data():
+    headers = {
+        "Authorization": f"Bearer {BEARER_TOKEN}",
+    }
+
+    response = requests.get(MBFC_API_URL, headers=headers)
+
+    if response.status_code == 200:
+        return response.json()  # Assuming response is JSON
+    else:
+        raise Exception(
+            f"Error fetching data from MBFC API: {response.status_code}, {response.text}"
+        )
+
+
+# Prune old MBFC data and insert fresh MBFC data
+def update_mbfc_data():
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS bias_data (
-            name TEXT,
-            bias TEXT,
-            total_votes INTEGER,
-            agree INTEGER,
-            disagree INTEGER,
-            agree_ratio REAL,
-            agreeance_text TEXT,
-            allsides_page TEXT,
-            url_pattern TEXT
+    # Prune old data
+    cursor.execute("DELETE FROM mbfc_data")
+
+    # Fetch fresh data from MBFC API
+    mbfc_data = fetch_mbfc_data()
+    print(f"MBFC data fetched: {len(mbfc_data)} entries")
+    # Insert fresh data
+    for entry in mbfc_data:
+        cursor.execute(
+            """
+            INSERT INTO mbfc_data (name, mbfc_url, domain, bias, factual_reporting, country, credibility)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                entry["Name"],
+                entry["MBFC URL"],
+                entry["Domain"],
+                entry["Bias"],
+                entry["Factual Reporting"],
+                entry["Country"],
+                entry["Credibility"],
+            ),
         )
-        """
-    )
 
-    cursor.execute("SELECT COUNT(*) FROM bias_data")
-    row_count = cursor.fetchone()[0]
-
-    if row_count == 0:
-        with open("allsides.csv", newline="", encoding="utf-8") as csvfile:
-            reader = csv.reader(csvfile)
-            next(reader)
-            for row in reader:
-                cursor.execute(
-                    """
-                    INSERT INTO bias_data (name, bias, total_votes, agree, disagree, agree_ratio, agreeance_text, allsides_page, url_pattern)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    row,
-                )
-        conn.commit()
-        print("AllSides CSV data loaded into database.")
-    else:
-        print("Bias data already loaded.")
-
+    conn.commit()
     cursor.close()
     conn.close()
 
 
-# FastAPI startup event to load AllSides data
+# Route to trigger MBFC data update
+@app.post("/update_mbfc_data")
+async def update_data(background_tasks: BackgroundTasks):
+    background_tasks.add_task(update_mbfc_data)
+    return {"message": "MBFC data update has been triggered in the background."}
+
+
+# -------------------- Startup Event --------------------
+
+
+# FastAPI startup event to ensure necessary tables are set up
 @app.on_event("startup")
 async def startup_event():
-    load_allsides_data()
+    setup_database()
 
 
-class QueryRequest(BaseModel):
-    url: str  # Expect the tab URL from background.js
-
-
-@app.post("/check_bias")
-async def check_bias(query: QueryRequest):
-    url = query.url
+# Function to set up necessary tables for GDELT and MBFC
+def setup_database():
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
 
+    # Create table for GDELT articles
     cursor.execute(
-        "SELECT name, bias, total_votes, agree, disagree, agree_ratio, agreeance_text, allsides_page, url_pattern FROM bias_data"
+        """
+        CREATE TABLE IF NOT EXISTS news_articles (
+            id SERIAL PRIMARY KEY,
+            date TIMESTAMP,
+            source TEXT,
+            url TEXT,
+            keywords TEXT
+        )
+        """
     )
-    rows = cursor.fetchall()
+
+    # Create table for MBFC data
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS mbfc_data (
+            id SERIAL PRIMARY KEY,
+            name TEXT,
+            mbfc_url TEXT,
+            domain TEXT,
+            bias TEXT,
+            factual_reporting TEXT,
+            country TEXT,
+            credibility TEXT
+        )
+        """
+    )
+
+    conn.commit()
+    cursor.close()
     conn.close()
-
-    matched_data = None
-    for row in rows:
-        pattern = row[8]
-        if pattern and re.match(pattern, url):
-            matched_data = {
-                "name": row[0],
-                "bias": row[1],
-                "total_votes": row[2],
-                "agree": row[3],
-                "disagree": row[4],
-                "agree_ratio": row[5],
-                "agreeance_text": row[6],
-                "allsides_page": row[7],
-            }
-            break
-
-    if matched_data:
-        return matched_data
-    else:
-        return {"bias": f"No bias information found for {url}"}
