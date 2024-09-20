@@ -5,7 +5,7 @@ import zipfile
 import pandas as pd
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-import time  # To add delay between retry attempts
+import time
 
 # Load environment variables from .env
 load_dotenv()
@@ -18,7 +18,7 @@ GDELT_BASE_URL = os.getenv("GDELT_BASE_URL")
 
 
 # Download GDELT files for the past 3 days
-def download_gdelt_files(days=3):
+def download_gdelt_files(days=1):
     os.makedirs("gdelt_data", exist_ok=True)
 
     now = datetime.utcnow()
@@ -28,7 +28,6 @@ def download_gdelt_files(days=3):
     retries = 3  # Number of retries in case of failure
 
     while current_time <= now:
-        # Round the minutes to the nearest valid 15-minute interval (00, 15, 30, 45)
         minutes = (current_time.minute // 15) * 15
         file_name = current_time.replace(minute=minutes, second=0).strftime(
             "%Y%m%d%H%M00.gkg.csv.zip"
@@ -42,15 +41,12 @@ def download_gdelt_files(days=3):
                 if response.status_code == 200:
                     zip_file_path = f"gdelt_data/{file_name}"
 
-                    # Save the zip file
                     with open(zip_file_path, "wb") as file:
                         file.write(response.content)
 
-                    # Unzip the file
                     with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
                         zip_ref.extractall("gdelt_data")
 
-                    # Remove the zip file after extracting
                     os.remove(zip_file_path)
                     print(f"Downloaded and extracted: {file_name}")
                     break
@@ -63,7 +59,7 @@ def download_gdelt_files(days=3):
                 if attempt + 1 == retries:
                     print(f"Failed to download {url} after {retries} attempts")
 
-        current_time += timedelta(minutes=15)  # Move to the next 15-minute interval
+        current_time += timedelta(minutes=15)
 
 
 # Parse GDELT CSV files and store them in PostgreSQL
@@ -75,55 +71,64 @@ def parse_and_store_gdelt_data():
         """
         CREATE TABLE IF NOT EXISTS news_articles (
             id SERIAL PRIMARY KEY,
-            date TIMESTAMP,
-            source TEXT,
-            url TEXT,
-            keywords TEXT
+            V1Date TIMESTAMP,
+            DocumentIdentifier TEXT,
+            V2Themes TEXT,
+            V2Locations TEXT,
+            V2Persons TEXT,
+            V2Organizations TEXT,
+            V2Counts TEXT,
+            V2Images TEXT,
+            V2Videos TEXT,
+            V2Quotes TEXT,
+            V2Summary TEXT
         )
         """
     )
 
     for file_name in os.listdir("gdelt_data"):
-        if file_name.endswith(".csv"):
-            csv_file_path = f"gdelt_data/{file_name}"
+        # if file_name.endswith(".csv"):
+        csv_file_path = f"gdelt_data/{file_name}"
 
-            col_names = ["V1Date", "DocumentIdentifier", "V2Themes"]
-            df = pd.read_csv(
-                csv_file_path,
-                sep="\t",
-                header=None,
-                usecols=[0, 2, 7],  # Adjust based on GKG columns
-                names=col_names,
-                on_bad_lines="skip",
-            )
+        #     col_names = ["V1Date", "DocumentIdentifier", "V2Themes"]
+        #     df = pd.read_csv(
+        #         csv_file_path,
+        #         sep="\t",
+        #         header=None,
+        #         usecols=[0, 2, 7],
+        #         names=col_names,
+        #         on_bad_lines="skip",
+        #     )
 
-            # Convert V1Date to a proper timestamp and filter missing entries
-            df["V1Date"] = pd.to_datetime(
-                df["V1Date"], format="%Y%m%d%H%M%S", errors="coerce"
-            )
-            filtered_data = df.dropna(subset=["DocumentIdentifier", "V2Themes"])
+        #     df["V1Date"] = pd.to_datetime(
+        #         df["V1Date"], format="%Y%m%d%H%M%S", errors="coerce"
+        #     )
+        #     filtered_data = df.dropna(subset=["DocumentIdentifier", "V2Themes"])
 
-            # Insert data into news_articles table
-            for _, row in filtered_data.iterrows():
-                cursor.execute(
-                    """
-                    INSERT INTO news_articles (date, source, url, keywords)
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    (
-                        row["V1Date"],
-                        "GDELT",
-                        row["DocumentIdentifier"],
-                        row["V2Themes"],
-                    ),
-                )
+        #     for _, row in filtered_data.iterrows():
+        #         cursor.execute(
+        #             """
+        #             INSERT INTO news_articles (date, source, url, keywords)
+        #             VALUES (%s, %s, %s, %s)
+        #             """,
+        #             (
+        #                 row["V1Date"],
+        #                 "GDELT",
+        #                 row["DocumentIdentifier"],
+        #                 row["V2Themes"],
+        #             ),
+        #         )
+
+            # Delete the CSV file after processing
+        os.remove(csv_file_path)
+        print(f"Deleted file: {csv_file_path}")
 
     conn.commit()
     cursor.close()
     conn.close()
 
 
-# Prune GDELT data older than 3 days
+# Prune GDELT data older than 3 days and delete old CSV files
 def prune_old_gdelt_data():
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
@@ -138,3 +143,9 @@ def prune_old_gdelt_data():
     conn.commit()
     cursor.close()
     conn.close()
+
+    # Delete old CSV files in the gdelt_data directory
+    for file_name in os.listdir("gdelt_data"):
+        csv_file_path = f"gdelt_data/{file_name}"
+        os.remove(csv_file_path)
+        print(f"Deleted old CSV file: {csv_file_path}")
