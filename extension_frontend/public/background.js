@@ -16,7 +16,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
             // Extract domain name
             const domain = new URL(url).hostname;
-            console.log(domain);
 
             // Fetch the bias data from the FastAPI backend using the domain name
             try {
