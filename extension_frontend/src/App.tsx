@@ -4,11 +4,16 @@ import './App.css';
 // Define the structure of the bias data
 interface BiasData {
   name: string;
+  mbfc_url: string;
+  domain: string;
   bias: string;
+  factual_reporting: string;
+  country: string;
+  credibility: string;
 }
 
 function App() {
-  const [bias, setBias] = useState<BiasData | string>('Loading...');
+  const [biasData, setBiasData] = useState<BiasData | string>('Loading...');
   const [publication, setPublication] = useState('');
 
   useEffect(() => {
@@ -19,9 +24,9 @@ function App() {
     chrome.runtime.onMessage.addListener((message) => {
       if (message.action === 'biasResult') {
         if (typeof message.bias === 'string') {
-          setBias(message.bias);  // If there's an error or no bias data
+          setBiasData(message.bias);  // If there's an error or no bias data
         } else {
-          setBias(message.bias);
+          setBiasData(message.bias);
           setPublication(message.bias.name);
         }
       }
@@ -34,9 +39,19 @@ function App() {
 
       <div>
         <h2>MBFC Bias</h2>
-        <p>
-          {typeof bias === 'string' ? bias : `${publication} : ${bias.bias}`}
-        </p>
+        {typeof biasData === 'string' ? (
+          <p>{biasData}</p>  // Show error or loading message
+        ) : (
+          <div>
+            <p><strong>Publication:</strong> {publication}</p>
+            <p><strong>Bias:</strong> {biasData.bias}</p>
+            <p><strong>Factual Reporting:</strong> {biasData.factual_reporting}</p>
+            <p><strong>Country:</strong> {biasData.country}</p>
+            <p><strong>Credibility:</strong> {biasData.credibility}</p>
+            <p><strong>Domain:</strong> {biasData.domain}</p>
+            <p><strong>MBFC URL:</strong> <a href={biasData.mbfc_url} target="_blank" rel="noopener noreferrer">Visit Source</a></p>
+          </div>
+        )}
       </div>
     </>
   );

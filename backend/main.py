@@ -245,12 +245,13 @@ async def check_bias_data(request: DomainRequest):
 
     domain = request.domain
 
+    # Fetch all relevant fields from the database
     cursor.execute(
         """
-    SELECT name, bias
-    FROM mbfc_data
-    WHERE domain = REGEXP_REPLACE(%s, '^www\\.', '')
-    """,
+        SELECT name, mbfc_url, domain, bias, factual_reporting, country, credibility
+        FROM mbfc_data
+        WHERE domain = REGEXP_REPLACE(%s, '^www\\.', '')
+        """,
         (domain,),
     )
 
@@ -258,7 +259,25 @@ async def check_bias_data(request: DomainRequest):
     cursor.close()
     conn.close()
 
-    return {"data": [{"name": row[0], "bias": row[1]} for row in data]}
+    # If no data is found, return an empty response
+    if not data:
+        return {"data": []}
+
+    # Return the full MBFC data for the domain
+    return {
+        "data": [
+            {
+                "name": row[0],
+                "mbfc_url": row[1],
+                "domain": row[2],
+                "bias": row[3],
+                "factual_reporting": row[4],
+                "country": row[5],
+                "credibility": row[6],
+            }
+            for row in data
+        ]
+    }
 
 
 # -------------------- Startup Event --------------------
