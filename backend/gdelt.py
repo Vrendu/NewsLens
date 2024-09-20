@@ -5,7 +5,9 @@ import zipfile
 import pandas as pd
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import time  # To add delay between retry attempts
 
+# Load environment variables from .env
 load_dotenv()
 
 # PostgreSQL connection details from .env
@@ -26,7 +28,11 @@ def download_gdelt_files(days=3):
     retries = 3  # Number of retries in case of failure
 
     while current_time <= now:
-        file_name = current_time.strftime("%Y%m%d%H%M00.gkg.csv.zip")
+        # Round the minutes to the nearest valid 15-minute interval (00, 15, 30, 45)
+        minutes = (current_time.minute // 15) * 15
+        file_name = current_time.replace(minute=minutes, second=0).strftime(
+            "%Y%m%d%H%M00.gkg.csv.zip"
+        )
         url = GDELT_BASE_URL + file_name
         print(f"Attempting to download {url}")
 
@@ -57,7 +63,7 @@ def download_gdelt_files(days=3):
                 if attempt + 1 == retries:
                     print(f"Failed to download {url} after {retries} attempts")
 
-        current_time += timedelta(hours=1)
+        current_time += timedelta(minutes=15)  # Move to the next 15-minute interval
 
 
 # Parse GDELT CSV files and store them in PostgreSQL
@@ -86,16 +92,18 @@ def parse_and_store_gdelt_data():
                 csv_file_path,
                 sep="\t",
                 header=None,
-                usecols=[0, 2, 7],
+                usecols=[0, 2, 7],  # Adjust based on GKG columns
                 names=col_names,
                 on_bad_lines="skip",
             )
 
+            # Convert V1Date to a proper timestamp and filter missing entries
             df["V1Date"] = pd.to_datetime(
                 df["V1Date"], format="%Y%m%d%H%M%S", errors="coerce"
             )
             filtered_data = df.dropna(subset=["DocumentIdentifier", "V2Themes"])
 
+            # Insert data into news_articles table
             for _, row in filtered_data.iterrows():
                 cursor.execute(
                     """

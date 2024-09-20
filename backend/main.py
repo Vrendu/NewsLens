@@ -57,10 +57,17 @@ def setup_database():
         """
         CREATE TABLE IF NOT EXISTS news_articles (
             id SERIAL PRIMARY KEY,
-            date TIMESTAMP,
-            source TEXT,
-            url TEXT,
-            keywords TEXT
+            V1Date TIMESTAMP,
+            DocumentIdentifier TEXT,
+            V2Themes TEXT,
+            V2Locations TEXT,
+            V2Persons TEXT,
+            V2Organizations TEXT,
+            V2Counts TEXT,
+            V2Images TEXT,
+            V2Videos TEXT,
+            V2Quotes TEXT,
+            V2Summary TEXT
         )
         """
     )
@@ -86,3 +93,6 @@ def setup_database():
 
 
 # FastAPI startup event to ensure necessary
+@app.on_event("startup")
+async def startup():
+    setup_database()
