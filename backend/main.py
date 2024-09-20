@@ -4,7 +4,7 @@ import psycopg2
 import requests
 import zipfile
 import pandas as pd
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Header, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -222,9 +222,17 @@ def update_mbfc_data():
     conn.close()
 
 
+API_KEY = os.getenv("API_KEY")
+
+
 # Route to trigger MBFC data update
 @app.post("/update_mbfc_data")
-async def update_data(background_tasks: BackgroundTasks):
+async def update_data(background_tasks: BackgroundTasks, api_key: str = Header(...)):
+    # Check if the provided API key matches
+    if api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+    # If the API key is valid, proceed to update MBFC data
     background_tasks.add_task(update_mbfc_data)
     return {"message": "MBFC data update has been triggered in the background."}
 
