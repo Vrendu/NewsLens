@@ -10,11 +10,37 @@ interface BiasData {
   factual_reporting: string;
   country: string;
   credibility: string;
+  faviconUrl: string;
 }
+
+// Function to map biases to colors
+const getBiasColor = (bias: string) => {
+  switch (bias.toLowerCase()) {
+    case 'least biased':
+      return '#4caf50'; // Green
+    case 'left':
+    case 'left-center':
+      return '#2196f3'; // Blue
+    case 'right':
+    case 'right-center':
+      return '#f44336'; // Red
+    case 'pro-science':
+      return '#ff9800'; // Orange
+    case 'questionable':
+    case 'conspiracy-pseudoscience':
+    case 'pseudoscience':
+      return '#9e9e9e'; // Gray
+    case 'satire':
+      return '#9c27b0'; // Purple
+    default:
+      return '#ffffff'; // White as fallback
+  }
+};
 
 function App() {
   const [biasData, setBiasData] = useState<BiasData | string>('Loading...');
   const [publication, setPublication] = useState('');
+  const [logo, setLogo] = useState('');
 
   useEffect(() => {
     // Send message to the background script to check for bias
@@ -26,8 +52,9 @@ function App() {
         if (typeof message.bias === 'string') {
           setBiasData(message.bias);  // If there's an error or no bias data
         } else {
+          setLogo(message.faviconUrl);
           setBiasData(message.bias);
-          setPublication(message.bias.name);
+          setPublication(message.publication);
         }
       }
     });
@@ -44,14 +71,20 @@ function App() {
           ) : (
             <div className="content">
               <div className="publication-header">
-                <h3>{publication}</h3>
+                {logo && (
+                  <img src={logo} alt="Favicon" className="favicon" />
+                )}
+                {/* <h3>{publication}</h3> */}
               </div>
               <ul className="bias-details">
-                <li><strong>Bias:</strong> {biasData.bias}</li>
+                <li>
+                    <strong>{publication}'s Bias: </strong>
+                    <span style={{ background: getBiasColor(biasData.bias) }} className="bias-color">
+                     {biasData.bias}
+                  </span>
+                </li>
                 <li><strong>Factual Reporting:</strong> {biasData.factual_reporting}</li>
-                <li><strong>Country:</strong> {biasData.country}</li>
                 <li><strong>Credibility:</strong> {biasData.credibility}</li>
-                <li><strong>Domain:</strong> {biasData.domain}</li>
                 <a href={biasData.mbfc_url} target="_blank" rel="noopener noreferrer" className="source-link">Read More</a>
               </ul>
             </div>

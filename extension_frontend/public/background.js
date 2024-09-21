@@ -32,13 +32,16 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 }
 
                 const biasData = await response.json();
+                const faviconUrl = activeTab.favIconUrl || '';
+                //console.log(faviconUrl);
 
                 // Send the retrieved bias data to the frontend
                 if (biasData.data.length > 0) {
                     chrome.runtime.sendMessage({
                         action: 'biasResult',
                         bias: biasData.data[0],  // Send the first matched result
-                        publication: biasData.data[0].name
+                        publication: biasData.data[0].name,
+                        faviconUrl: faviconUrl
                     });
                 } else {
                     chrome.runtime.sendMessage({
