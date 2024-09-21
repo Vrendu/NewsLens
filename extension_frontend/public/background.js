@@ -50,7 +50,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
             } catch (error) {
                 chrome.runtime.sendMessage({
                     action: 'biasResult',
-                    bias: 'Error fetching bias data'
+                    bias: 'Server error'
                 });
             }
         });

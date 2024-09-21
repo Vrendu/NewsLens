@@ -35,23 +35,28 @@ function App() {
 
   return (
     <>
-      <h1>NewsLens</h1>
+      <div className="container">
+        <h1 className="title">NewsLens</h1>
 
-      <div>
-        <h2>MBFC Bias</h2>
-        {typeof biasData === 'string' ? (
-          <p>{biasData}</p>  // Show error or loading message
-        ) : (
-          <div>
-            <p><strong>Publication:</strong> {publication}</p>
-            <p><strong>Bias:</strong> {biasData.bias}</p>
-            <p><strong>Factual Reporting:</strong> {biasData.factual_reporting}</p>
-            <p><strong>Country:</strong> {biasData.country}</p>
-            <p><strong>Credibility:</strong> {biasData.credibility}</p>
-            <p><strong>Domain:</strong> {biasData.domain}</p>
-            <p><strong>MBFC URL:</strong> <a href={biasData.mbfc_url} target="_blank" rel="noopener noreferrer">Visit Source</a></p>
-          </div>
-        )}
+        <div className="card">
+          {typeof biasData === 'string' ? (
+            <p className="error-message">{biasData}</p>  // Show error or loading message
+          ) : (
+            <div className="content">
+              <div className="publication-header">
+                <h3>{publication}</h3>
+              </div>
+              <ul className="bias-details">
+                <li><strong>Bias:</strong> {biasData.bias}</li>
+                <li><strong>Factual Reporting:</strong> {biasData.factual_reporting}</li>
+                <li><strong>Country:</strong> {biasData.country}</li>
+                <li><strong>Credibility:</strong> {biasData.credibility}</li>
+                <li><strong>Domain:</strong> {biasData.domain}</li>
+                <a href={biasData.mbfc_url} target="_blank" rel="noopener noreferrer" className="source-link">Read More</a>
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
