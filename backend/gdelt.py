@@ -1,3 +1,5 @@
+# backend/gdelt.py
+
 import os
 import psycopg2
 import requests
@@ -140,7 +142,7 @@ def parse_and_store_gdelt_data():
                             SharingImage, RelatedImages, SocialImageEmbeds, SocialVideoEmbeds, 
                             Quotations, AllNames, Amounts, TranslationInfo, Extras
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
                         (
                             row.get("GKGRECORDID", None),
@@ -207,4 +209,3 @@ def prune_old_gdelt_data():
         csv_file_path = f"gdelt_data/{file_name}"
         os.remove(csv_file_path)
         print(f"Deleted old CSV file: {csv_file_path}")
-

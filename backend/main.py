@@ -1,3 +1,5 @@
+# backend/main.py
+
 from fastapi import FastAPI, BackgroundTasks, Header, HTTPException
 from pydantic import BaseModel
 from gdelt import download_gdelt_files, parse_and_store_gdelt_data, prune_old_gdelt_data
