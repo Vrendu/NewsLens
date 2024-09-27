@@ -1,4 +1,6 @@
-// Listener to check the political bias of the current active tab
+// background.js
+
+// Listener to check the political bias of the current active tab and related articles
 chrome.runtime.onMessage.addListener(async (message) => {
     if (message.action === 'checkBias') {
         // Get the active tab URL
@@ -33,7 +35,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
                 const biasData = await response.json();
                 const faviconUrl = activeTab.favIconUrl || '';
-                //console.log(faviconUrl);
 
                 // Send the retrieved bias data to the frontend
                 if (biasData.data.length > 0) {
@@ -49,6 +50,29 @@ chrome.runtime.onMessage.addListener(async (message) => {
                         bias: 'No bias data available for this domain'
                     });
                 }
+
+                // // Fetch the text content from the active tab
+                const [result] = await chrome.scripting.executeScript({
+                    target: { tabId: activeTab.id },
+                    function: () => document.body.innerText,  // Extract full article text
+                });
+
+                // Send the article text to the backend to get related articles
+                const relatedResponse = await fetch('http://127.0.0.1:8000/related_articles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: result.result })
+                });
+
+                const relatedData = await relatedResponse.json();
+
+                // Send the related articles to the frontend
+                chrome.runtime.sendMessage({
+                    action: 'relatedArticles',
+                    articles: relatedData.related_articles,
+                });
 
             } catch (error) {
                 chrome.runtime.sendMessage({

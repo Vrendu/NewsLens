@@ -13,6 +13,14 @@ interface BiasData {
   faviconUrl: string;
 }
 
+// Define the structure of related articles
+interface RelatedArticle {
+  DocumentIdentifier: string;
+  Themes: string;
+  SourceCommonName: string;
+  DATE: string;
+}
+
 // Function to map biases to colors
 const getBiasColor = (bias: string) => {
   switch (bias.toLowerCase()) {
@@ -39,14 +47,14 @@ const getBiasColor = (bias: string) => {
 
 function App() {
   const [biasData, setBiasData] = useState<BiasData | string>('Loading...');
-  const [newsData, setNewsData] = useState(["Dummy Data"]);
+  const [relatedArticles, setRelatedArticles] = useState<RelatedArticle[]>([]);
   const [publication, setPublication] = useState('');
   const [logo, setLogo] = useState('');
 
   useEffect(() => {
-    // Send message to the background script to check for bias
+    // Send message to the background script to check for bias and related articles
     chrome.runtime.sendMessage({ action: 'checkBias' });
-    setNewsData(["Dummy Data"]);
+
     // Listen for the response from the background script
     chrome.runtime.onMessage.addListener((message) => {
       if (message.action === 'biasResult') {
@@ -57,6 +65,10 @@ function App() {
           setBiasData(message.bias);
           setPublication(message.publication);
         }
+      }
+
+      if (message.action === 'relatedArticles') {
+        setRelatedArticles(message.articles || []);
       }
     });
   }, []);
@@ -79,15 +91,32 @@ function App() {
               <ul className="bias-details">
                 <li>
                   <strong>{publication}'s Bias: </strong>
-                  <span style={{ background: getBiasColor(biasData.bias) }} className="bias-color">
-                    {biasData.bias}
+                  <span style={{ background: getBiasColor((biasData as BiasData).bias) }} className="bias-color">
+                    {(biasData as BiasData).bias}
                   </span>
                 </li>
-                <li><strong>Factual Reporting:</strong> {biasData.factual_reporting}</li>
-                <li><strong>Credibility:</strong> {biasData.credibility}</li>
-                <li>{newsData && <span>{newsData}</span>}</li>
-                <a href={biasData.mbfc_url} target="_blank" rel="noopener noreferrer" className="source-link">Read More</a>
+                <li><strong>Factual Reporting:</strong> {(biasData as BiasData).factual_reporting}</li>
+                <li><strong>Credibility:</strong> {(biasData as BiasData).credibility}</li>
+                <a href={(biasData as BiasData).mbfc_url} target="_blank" rel="noopener noreferrer" className="source-link">Read More</a>
               </ul>
+
+              {/* Display Related Articles Section */}
+              <div className="related-articles">
+                <h2>Related Articles</h2>
+                {relatedArticles.length > 0 ? (
+                  <ul className="related-articles-list">
+                    {relatedArticles.map((article, index) => (
+                      <li key={index}>
+                        <a href={article.DocumentIdentifier} target="_blank" rel="noopener noreferrer">
+                          {article.SourceCommonName} - {new Date(article.DATE).toLocaleDateString()}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No related articles found.</p>
+                )}
+              </div>
             </div>
           )}
         </div>

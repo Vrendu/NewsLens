@@ -50,8 +50,10 @@ GDELT_COLUMNS = [
 ]
 
 
-# Download GDELT files for the past X days
-def download_gdelt_files(days=1):
+
+
+# Download GDELT files for the past 3 days
+def download_gdelt_files(days=3):
     os.makedirs("gdelt_data", exist_ok=True)
 
     now = datetime.utcnow()

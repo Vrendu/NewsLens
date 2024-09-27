@@ -7,18 +7,90 @@ from mbfc import update_mbfc_data, check_bias_data
 import psycopg2
 import os
 from dotenv import load_dotenv
+import nltk
 
 # Load environment variables
 load_dotenv()
 
+# Load required NLTK resources
+nltk.download("punkt")
+nltk.download("stopwords")
+
+# Initialize FastAPI
 app = FastAPI()
 
+# Retrieve API Key from environment variables
 API_KEY = os.getenv("API_KEY")
 
 
 # Define Pydantic model for domain request
 class DomainRequest(BaseModel):
     domain: str
+
+
+# Define Pydantic model for article text
+class ArticleTextRequest(BaseModel):
+    text: str
+
+
+# Function to extract keywords from text using NLTK
+def extract_keywords(text, num_keywords=10):
+    stop_words = set(nltk.corpus.stopwords.words("english"))
+    word_tokens = nltk.word_tokenize(text.lower())
+
+    # Remove stopwords and punctuation
+    filtered_words = [
+        word for word in word_tokens if word.isalpha() and word not in stop_words
+    ]
+
+    # Get the most common words as keywords
+    keywords = [
+        word for word, _ in nltk.FreqDist(filtered_words).most_common(num_keywords)
+    ]
+    return keywords
+
+
+# New route to get related articles based on text content
+@app.post("/related_articles")
+async def get_related_articles(request: ArticleTextRequest):
+    # Extract keywords from the provided text
+    keywords = extract_keywords(request.text)
+    if not keywords:
+        return {"message": "No keywords extracted from the article"}
+
+    # Connect to the database
+    conn = psycopg2.connect(os.getenv("DATABASE_URL"))
+    cursor = conn.cursor()
+
+    # Create a SQL query to search for articles with matching themes
+    query = """
+    SELECT DocumentIdentifier, Themes, SourceCommonName, DATE 
+    FROM news_articles
+    WHERE 
+    """
+
+    # Add conditions for matching themes
+    conditions = " OR ".join([f"Themes ILIKE '%{keyword}%'" for keyword in keywords])
+    query += conditions + " ORDER BY DATE DESC LIMIT 10"
+
+    cursor.execute(query)
+    results = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    # Convert results to a list of dictionaries
+    related_articles = [
+        {
+            "DocumentIdentifier": row[0],
+            "Themes": row[1],
+            "SourceCommonName": row[2],
+            "DATE": row[3],
+        }
+        for row in results
+    ]
+
+    return {"related_articles": related_articles}
 
 
 # Route to trigger the GDELT data update and pruning
@@ -110,7 +182,7 @@ def setup_database():
     conn.close()
 
 
-# FastAPI startup event to ensure necessary
+# FastAPI startup event to ensure necessary tables are created
 @app.on_event("startup")
 async def startup():
     setup_database()
