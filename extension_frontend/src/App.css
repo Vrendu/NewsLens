@@ -3,8 +3,8 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  height: 700px;
-  width: 700px;
+  height: 600px;
+  width: 800px;
 }
 
 * {
@@ -90,4 +90,24 @@ body {
 
 .bias-details strong {
   color: #e0e0e0;
+}
+
+.toggle-text {
+  cursor: pointer;
+  color: #007bff;
+  /* Bootstrap primary color */
+  font-weight: bold;
+  margin-bottom: 20px;
+  /* Space between toggle text and card */
+  text-align: center;
+  /* Center the text */
+  transition: color 0.3s;
+  /* Smooth transition for hover effect */
+}
+
+.toggle-text:hover {
+  color: #0056b3;
+  /* Darker shade on hover */
+  text-decoration: underline;
+  /* Underline on hover */
 }

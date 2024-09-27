@@ -16,8 +16,39 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # GDELT base URL for GKG files from .env
 GDELT_BASE_URL = os.getenv("GDELT_BASE_URL")
 
+# Define the columns (now including GKGRECORDID as the first column)
+GDELT_COLUMNS = [
+    "GKGRECORDID",
+    "DATE",
+    "SourceCollectionIdentifier",
+    "SourceCommonName",
+    "DocumentIdentifier",
+    "Counts",
+    "V2Counts",
+    "Themes",
+    "V2Themes",
+    "Locations",
+    "V2Locations",
+    "Persons",
+    "V2Persons",
+    "Organizations",
+    "V2Organizations",
+    "V2Tone",
+    "Dates",
+    "GCAM",
+    "SharingImage",
+    "RelatedImages",
+    "SocialImageEmbeds",
+    "SocialVideoEmbeds",
+    "Quotations",
+    "AllNames",
+    "Amounts",
+    "TranslationInfo",
+    "Extras",
+]
 
-# Download GDELT files for the past 3 days
+
+# Download GDELT files for the past X days
 def download_gdelt_files(days=1):
     os.makedirs("gdelt_data", exist_ok=True)
 
@@ -67,61 +98,87 @@ def parse_and_store_gdelt_data():
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS news_articles (
-            id SERIAL PRIMARY KEY,
-            V1Date TIMESTAMP,
-            DocumentIdentifier TEXT,
-            V2Themes TEXT,
-            V2Locations TEXT,
-            V2Persons TEXT,
-            V2Organizations TEXT,
-            V2Counts TEXT,
-            V2Images TEXT,
-            V2Videos TEXT,
-            V2Quotes TEXT,
-            V2Summary TEXT
-        )
-        """
-    )
-
     for file_name in os.listdir("gdelt_data"):
-        # if file_name.endswith(".csv"):
-        csv_file_path = f"gdelt_data/{file_name}"
+        if file_name.endswith(".csv"):
+            csv_file_path = f"gdelt_data/{file_name}"
 
-        #     col_names = ["V1Date", "DocumentIdentifier", "V2Themes"]
-        #     df = pd.read_csv(
-        #         csv_file_path,
-        #         sep="\t",
-        #         header=None,
-        #         usecols=[0, 2, 7],
-        #         names=col_names,
-        #         on_bad_lines="skip",
-        #     )
+            # Parse the CSV (including GKGRECORDID), using a more flexible encoding (ISO-8859-1)
+            try:
+                df = pd.read_csv(
+                    csv_file_path,
+                    sep="\t",
+                    header=None,
+                    names=GDELT_COLUMNS,
+                    encoding="ISO-8859-1",
+                    on_bad_lines="skip",
+                )
+            except UnicodeDecodeError as e:
+                print(f"Encoding error: {e}")
+                continue  # Skip problematic files
 
-        #     df["V1Date"] = pd.to_datetime(
-        #         df["V1Date"], format="%Y%m%d%H%M%S", errors="coerce"
-        #     )
-        #     filtered_data = df.dropna(subset=["DocumentIdentifier", "V2Themes"])
+            # Convert DATE column to proper timestamp
+            df["DATE"] = pd.to_datetime(
+                df["DATE"], format="%Y%m%d%H%M%S", errors="coerce"
+            )
 
-        #     for _, row in filtered_data.iterrows():
-        #         cursor.execute(
-        #             """
-        #             INSERT INTO news_articles (date, source, url, keywords)
-        #             VALUES (%s, %s, %s, %s)
-        #             """,
-        #             (
-        #                 row["V1Date"],
-        #                 "GDELT",
-        #                 row["DocumentIdentifier"],
-        #                 row["V2Themes"],
-        #             ),
-        #         )
+            # Ensure SourceCollectionIdentifier is an integer (replace invalid data with None)
+            df["SourceCollectionIdentifier"] = pd.to_numeric(
+                df["SourceCollectionIdentifier"], errors="coerce"
+            )
+
+            # Insert each row into the database
+            for _, row in df.iterrows():
+                try:
+                    # Insert row into the table
+                    cursor.execute(
+                        """
+                        INSERT INTO news_articles (
+                            GKGRECORDID, DATE, SourceCollectionIdentifier, 
+                            SourceCommonName, DocumentIdentifier, Counts, V2Counts, 
+                            Themes, V2Themes, Locations, V2Locations, Persons, V2Persons, 
+                            Organizations, V2Organizations, V2Tone, Dates, GCAM, 
+                            SharingImage, RelatedImages, SocialImageEmbeds, SocialVideoEmbeds, 
+                            Quotations, AllNames, Amounts, TranslationInfo, Extras
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            row.get("GKGRECORDID", None),
+                            row.get("DATE", None),
+                            row.get("SourceCollectionIdentifier", None),
+                            row.get("SourceCommonName", None),
+                            row.get("DocumentIdentifier", None),
+                            row.get("Counts", None),
+                            row.get("V2Counts", None),
+                            row.get("Themes", None),
+                            row.get("V2Themes", None),
+                            row.get("Locations", None),
+                            row.get("V2Locations", None),
+                            row.get("Persons", None),
+                            row.get("V2Persons", None),
+                            row.get("Organizations", None),
+                            row.get("V2Organizations", None),
+                            row.get("V2Tone", None),
+                            row.get("Dates", None),
+                            row.get("GCAM", None),
+                            row.get("SharingImage", None),
+                            row.get("RelatedImages", None),
+                            row.get("SocialImageEmbeds", None),
+                            row.get("SocialVideoEmbeds", None),
+                            row.get("Quotations", None),
+                            row.get("AllNames", None),
+                            row.get("Amounts", None),
+                            row.get("TranslationInfo", None),
+                            row.get("Extras", None),
+                        ),
+                    )
+                except Exception as e:
+                    print(f"Error inserting row: {row}")
+                    print(f"Exception: {e}")
 
             # Delete the CSV file after processing
-        os.remove(csv_file_path)
-        print(f"Deleted file: {csv_file_path}")
+            os.remove(csv_file_path)
+            print(f"Deleted file: {csv_file_path}")
 
     conn.commit()
     cursor.close()
@@ -133,10 +190,11 @@ def prune_old_gdelt_data():
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
 
+    # Delete records older than 3 days
     cursor.execute(
         """
         DELETE FROM news_articles
-        WHERE date < NOW() - INTERVAL '3 days'
+        WHERE DATE::timestamp < NOW() - INTERVAL '3 days'
         """
     )
 
@@ -149,3 +207,4 @@ def prune_old_gdelt_data():
         csv_file_path = f"gdelt_data/{file_name}"
         os.remove(csv_file_path)
         print(f"Deleted old CSV file: {csv_file_path}")
+

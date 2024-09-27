@@ -39,13 +39,14 @@ const getBiasColor = (bias: string) => {
 
 function App() {
   const [biasData, setBiasData] = useState<BiasData | string>('Loading...');
+  const [newsData, setNewsData] = useState(["Dummy Data"]);
   const [publication, setPublication] = useState('');
   const [logo, setLogo] = useState('');
 
   useEffect(() => {
     // Send message to the background script to check for bias
     chrome.runtime.sendMessage({ action: 'checkBias' });
-
+    setNewsData(["Dummy Data"]);
     // Listen for the response from the background script
     chrome.runtime.onMessage.addListener((message) => {
       if (message.action === 'biasResult') {
@@ -74,17 +75,17 @@ function App() {
                 {logo && (
                   <img src={logo} alt="Favicon" className="favicon" />
                 )}
-                {/* <h3>{publication}</h3> */}
               </div>
               <ul className="bias-details">
                 <li>
-                    <strong>{publication}'s Bias: </strong>
-                    <span style={{ background: getBiasColor(biasData.bias) }} className="bias-color">
-                     {biasData.bias}
+                  <strong>{publication}'s Bias: </strong>
+                  <span style={{ background: getBiasColor(biasData.bias) }} className="bias-color">
+                    {biasData.bias}
                   </span>
                 </li>
                 <li><strong>Factual Reporting:</strong> {biasData.factual_reporting}</li>
                 <li><strong>Credibility:</strong> {biasData.credibility}</li>
+                <li>{newsData && <span>{newsData}</span>}</li>
                 <a href={biasData.mbfc_url} target="_blank" rel="noopener noreferrer" className="source-link">Read More</a>
               </ul>
             </div>

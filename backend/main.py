@@ -57,17 +57,33 @@ def setup_database():
         """
         CREATE TABLE IF NOT EXISTS news_articles (
             id SERIAL PRIMARY KEY,
-            V1Date TIMESTAMP,
+            GKGRECORDID TEXT,
+            DATE TIMESTAMP,
+            SourceCollectionIdentifier INT,
+            SourceCommonName TEXT,
             DocumentIdentifier TEXT,
-            V2Themes TEXT,
-            V2Locations TEXT,
-            V2Persons TEXT,
-            V2Organizations TEXT,
+            Counts TEXT,
             V2Counts TEXT,
-            V2Images TEXT,
-            V2Videos TEXT,
-            V2Quotes TEXT,
-            V2Summary TEXT
+            Themes TEXT,
+            V2Themes TEXT,
+            Locations TEXT,
+            V2Locations TEXT,
+            Persons TEXT,
+            V2Persons TEXT,
+            Organizations TEXT,
+            V2Organizations TEXT,
+            V2Tone TEXT,
+            Dates TEXT,
+            GCAM TEXT,
+            SharingImage TEXT,
+            RelatedImages TEXT,
+            SocialImageEmbeds TEXT,
+            SocialVideoEmbeds TEXT,
+            Quotations TEXT,
+            AllNames TEXT,
+            Amounts TEXT,
+            TranslationInfo TEXT,
+            Extras TEXT
         )
         """
     )
