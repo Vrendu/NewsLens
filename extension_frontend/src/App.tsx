@@ -50,12 +50,13 @@ function App() {
   const [relatedArticles, setRelatedArticles] = useState<RelatedArticle[]>([]);
   const [publication, setPublication] = useState('');
   const [logo, setLogo] = useState('');
+  const [activeTab, setActiveTab] = useState<'bias' | 'articles'>('bias'); 
 
   useEffect(() => {
-    // Send message to the background script to check for bias and related articles
+    
     chrome.runtime.sendMessage({ action: 'checkBias' });
 
-    // Listen for the response from the background script
+    
     chrome.runtime.onMessage.addListener((message) => {
       if (message.action === 'biasResult') {
         if (typeof message.bias === 'string') {
@@ -78,45 +79,64 @@ function App() {
       <div className="container">
         <h1 className="title">NewsLens</h1>
 
-        <div className="card">
-          {typeof biasData === 'string' ? (
-            <p className="error-message">{biasData}</p>  // Show error or loading message
-          ) : (
-            <div className="content">
-              <div className="publication-header">
-                {logo && (
-                  <img src={logo} alt="Favicon" className="favicon" />
-                )}
-              </div>
-              <ul className="bias-details">
-                <li>
-                  <strong>{publication}'s Bias: </strong>
-                  <span style={{ background: getBiasColor((biasData as BiasData).bias) }} className="bias-color">
-                    {(biasData as BiasData).bias}
-                  </span>
-                </li>
-                <li><strong>Factual Reporting:</strong> {(biasData as BiasData).factual_reporting}</li>
-                <li><strong>Credibility:</strong> {(biasData as BiasData).credibility}</li>
-                <a href={(biasData as BiasData).mbfc_url} target="_blank" rel="noopener noreferrer" className="source-link">Read More</a>
-              </ul>
+        {/* Tab Navigation */}
+        <div className="tabs">
+          <span
+            className={`tab ${activeTab === 'bias' ? 'active' : ''}`}
+            onClick={() => setActiveTab('bias')}
+          >
+            Bias Details
+          </span>
+          <span
+            className={`tab ${activeTab === 'articles' ? 'active' : ''}`}
+            onClick={() => setActiveTab('articles')}
+          >
+            Related Articles
+          </span>
+        </div>
 
-              {/* Display Related Articles Section */}
-              <div className="related-articles">
-                <h2>Related Articles</h2>
-                {relatedArticles.length > 0 ? (
-                  <ul className="related-articles-list">
-                    {relatedArticles.map((article, index) => (
-                      <li key={index}>
-                        <a href={article.DocumentIdentifier} target="_blank" rel="noopener noreferrer">
-                          {article.SourceCommonName} - {new Date(article.DATE).toLocaleDateString()}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No related articles found.</p>
-                )}
+        <div className="card">
+          {/* Show content based on the active tab */}
+          {activeTab === 'bias' ? (
+            // Bias Details View
+            typeof biasData === 'string' ? (
+              <p className="error-message">{biasData}</p>  
+            ) : (
+              <div className="content">
+                <div className="publication-header">
+                  {logo && (
+                    <img src={logo} alt="Favicon" className="favicon" />
+                  )}
+                </div>
+                <ul className="bias-details">
+                  <li>
+                    <strong>{publication}'s Bias: </strong>
+                    <span style={{ background: getBiasColor((biasData as BiasData).bias) }} className="bias-color">
+                      {(biasData as BiasData).bias}
+                    </span>
+                  </li>
+                  <li><strong>Factual Reporting:</strong> {(biasData as BiasData).factual_reporting}</li>
+                  <li><strong>Credibility:</strong> {(biasData as BiasData).credibility}</li>
+                  <a href={(biasData as BiasData).mbfc_url} target="_blank" rel="noopener noreferrer" className="source-link">Media Bias Fact Check Analysis</a>
+                </ul>
               </div>
+            )
+          ) : (
+            <div className="related-articles content">
+              <h2>Related Articles</h2>
+              {relatedArticles.length > 0 ? (
+                <ul className="related-articles-list">
+                  {relatedArticles.map((article, index) => (
+                    <li key={index}>
+                      <a href={article.DocumentIdentifier} target="_blank" rel="noopener noreferrer">
+                        {article.SourceCommonName} - {new Date(article.DATE).toLocaleDateString()}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No related articles found.</p>
+              )}
             </div>
           )}
         </div>

@@ -35,9 +35,7 @@ body {
   transition: transform 0.3s ease;
 }
 
-.card:hover {
-  transform: translateY(-5px);
-}
+
 
 .card-title {
   font-size: 1.8rem;
@@ -95,19 +93,81 @@ body {
 .toggle-text {
   cursor: pointer;
   color: #007bff;
-  /* Bootstrap primary color */
   font-weight: bold;
   margin-bottom: 20px;
-  /* Space between toggle text and card */
   text-align: center;
-  /* Center the text */
   transition: color 0.3s;
-  /* Smooth transition for hover effect */
 }
 
 .toggle-text:hover {
   color: #0056b3;
-  /* Darker shade on hover */
   text-decoration: underline;
-  /* Underline on hover */
+}
+
+/* Updated Styles for Text-Based Tabs */
+.tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #555555;
+}
+
+.tab {
+  margin: 0 15px;
+  cursor: pointer;
+  color: #e0e0e0;
+  font-size: 1.2rem;
+  font-weight: normal;
+  padding-bottom: 5px;
+  transition: color 0.3s, font-weight 0.3s;
+}
+
+.tab:hover {
+  color: #cccccc;
+}
+
+.tab.active {
+  font-weight: bold;
+  border-bottom: 2px solid #61dafb;
+  /* Underline the active tab */
+  color: #ffffff;
+}
+
+/* Related Articles Styling */
+.related-articles {
+  margin-top: 20px;
+}
+
+.related-articles h2 {
+  font-size: 1.8rem;
+  margin-bottom: 15px;
+  color: #e0e0e0;
+}
+
+.related-articles-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.related-articles-list li {
+  margin: 10px 0;
+  font-size: 1.1rem;
+}
+
+.related-articles-list li a {
+  color: #61dafb;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.related-articles-list li a:hover {
+  color: #21a1f1;
+}
+
+.favicon {
+  height: 32px;
+  width: 32px;
+  border-radius: 50%;
+  margin-right: 10px;
 }

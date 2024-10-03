@@ -2,17 +2,25 @@
 
 from fastapi import FastAPI, BackgroundTasks, Header, HTTPException
 from pydantic import BaseModel
-from gdelt import download_gdelt_files, parse_and_store_gdelt_data, prune_old_gdelt_data
 from mbfc import update_mbfc_data, check_bias_data
 import psycopg2
 import os
-from dotenv import load_dotenv
+import ssl
 import nltk
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Load required NLTK resources
+# Configure SSL context for NLTK downloads if necessary
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
+# Download required NLTK resources
 nltk.download("punkt")
 nltk.download("stopwords")
 
@@ -23,54 +31,58 @@ app = FastAPI()
 API_KEY = os.getenv("API_KEY")
 
 
-# Define Pydantic model for domain request
+# Define Pydantic models for requests
 class DomainRequest(BaseModel):
     domain: str
 
 
-# Define Pydantic model for article text
-class ArticleTextRequest(BaseModel):
-    text: str
+class TitleAndTextRequest(BaseModel):
+    title: str
+    innerText: str
 
 
-# Function to extract keywords from text using NLTK
-def extract_keywords(text, num_keywords=10):
+# Function to extract keywords from the title and text using NLTK
+def extract_keywords_from_text(text: str, min_length: int = 3):
+    """Extract keywords from text by splitting and filtering based on length."""
     stop_words = set(nltk.corpus.stopwords.words("english"))
-    word_tokens = nltk.word_tokenize(text.lower())
-
-    # Remove stopwords and punctuation
-    filtered_words = [
-        word for word in word_tokens if word.isalpha() and word not in stop_words
-    ]
-
-    # Get the most common words as keywords
+    words = nltk.word_tokenize(text.lower())
     keywords = [
-        word for word, _ in nltk.FreqDist(filtered_words).most_common(num_keywords)
+        word for word in words if word not in stop_words and len(word) >= min_length
     ]
     return keywords
 
 
-# New route to get related articles based on text content
-@app.post("/related_articles")
-async def get_related_articles(request: ArticleTextRequest):
-    # Extract keywords from the provided text
-    keywords = extract_keywords(request.text)
+# Route to get related articles based on title and inner text
+@app.post("/related_articles_by_text")
+async def get_related_articles_by_text(request: TitleAndTextRequest):
+    print("Getting related articles by text")
+    # Extract keywords from both the title and the inner text
+    title_keywords = extract_keywords_from_text(request.title)
+    inner_text_keywords = extract_keywords_from_text(request.innerText)
+    print(title_keywords, inner_text_keywords)
+    # Combine keywords from both sources
+    keywords = set(title_keywords + inner_text_keywords)
     if not keywords:
-        return {"message": "No keywords extracted from the article"}
+        return {"message": "No keywords extracted from the title or text"}
 
     # Connect to the database
     conn = psycopg2.connect(os.getenv("DATABASE_URL"))
     cursor = conn.cursor()
 
-    # Create a SQL query to search for articles with matching themes
+    # Create a SQL query to search for articles with matching themes, locations, persons, or organizations
     query = """
-    SELECT DocumentIdentifier, Themes, SourceCommonName, DATE 
+    SELECT DocumentIdentifier, Themes, SourceCommonName, DATE, Locations, Persons, Organizations
     FROM news_articles
     WHERE 
     """
 
-    # Add conditions for matching themes
-    conditions = " OR ".join([f"Themes ILIKE '%{keyword}%'" for keyword in keywords])
+    # Add conditions for matching themes, locations, persons, or organizations using the keywords
+    conditions = " OR ".join(
+        [
+            f"Themes ILIKE '%{keyword}%' OR Locations ILIKE '%{keyword}%' OR Persons ILIKE '%{keyword}%' OR Organizations ILIKE '%{keyword}%'"
+            for keyword in keywords
+        ]
+    )
     query += conditions + " ORDER BY DATE DESC LIMIT 10"
 
     cursor.execute(query)
@@ -86,22 +98,15 @@ async def get_related_articles(request: ArticleTextRequest):
             "Themes": row[1],
             "SourceCommonName": row[2],
             "DATE": row[3],
+            "Locations": row[4],
+            "Persons": row[5],
+            "Organizations": row[6],
         }
         for row in results
     ]
 
     return {"related_articles": related_articles}
 
-
-# Route to trigger the GDELT data update and pruning
-@app.post("/update_gdelt_data")
-async def update_gdelt_data(background_tasks: BackgroundTasks):
-    background_tasks.add_task(download_gdelt_files)
-    background_tasks.add_task(parse_and_store_gdelt_data)
-    background_tasks.add_task(prune_old_gdelt_data)
-    return {
-        "message": "GDELT data update and pruning has been triggered in the background."
-    }
 
 
 # Route to trigger MBFC data update
@@ -126,41 +131,6 @@ async def check_bias_data_route(request: DomainRequest):
 def setup_database():
     conn = psycopg2.connect(os.getenv("DATABASE_URL"))
     cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS news_articles (
-            id SERIAL PRIMARY KEY,
-            GKGRECORDID TEXT,
-            DATE TIMESTAMP,
-            SourceCollectionIdentifier INT,
-            SourceCommonName TEXT,
-            DocumentIdentifier TEXT,
-            Counts TEXT,
-            V2Counts TEXT,
-            Themes TEXT,
-            V2Themes TEXT,
-            Locations TEXT,
-            V2Locations TEXT,
-            Persons TEXT,
-            V2Persons TEXT,
-            Organizations TEXT,
-            V2Organizations TEXT,
-            V2Tone TEXT,
-            Dates TEXT,
-            GCAM TEXT,
-            SharingImage TEXT,
-            RelatedImages TEXT,
-            SocialImageEmbeds TEXT,
-            SocialVideoEmbeds TEXT,
-            Quotations TEXT,
-            AllNames TEXT,
-            Amounts TEXT,
-            TranslationInfo TEXT,
-            Extras TEXT
-        )
-        """
-    )
 
     cursor.execute(
         """
