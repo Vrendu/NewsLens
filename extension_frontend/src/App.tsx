@@ -74,6 +74,13 @@ function App() {
     });
   }, []);
 
+  // Listen for active tab change and trigger fetchRelatedArticles
+  useEffect(() => {
+    if (activeTab === 'articles') {
+      chrome.runtime.sendMessage({ action: 'fetchRelatedArticles' });
+    }
+  }, [activeTab]);
+
   return (
     <>
       <div className="container">
