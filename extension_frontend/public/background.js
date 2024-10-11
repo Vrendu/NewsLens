@@ -110,7 +110,7 @@ async function handleFetchRelatedArticles() {
                 target: { tabId: activeTabId },
                 func: () => ({
                     title: document.title,
-                    innerText: document.body.innerText.slice(0, 5000),  // Capture up to 5000 characters of innerText
+                    innerText: document.body.innerText.slice(0, 10000),  
                 }),
             },
             async (results) => {
@@ -129,6 +129,8 @@ async function handleFetchRelatedArticles() {
 
                         if (response.ok) {
                             console.log(`Successfully sent title and innerText to backend: ${title}`);
+                            const data = await response.json();
+                            console.log('Backend response:', data);
                         } else {
                             console.error('Failed to send data to backend');
                         }
