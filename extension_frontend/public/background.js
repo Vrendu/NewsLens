@@ -131,6 +131,7 @@ async function handleFetchRelatedArticles() {
                             console.log(`Successfully sent title and innerText to backend: ${title}`);
                             const data = await response.json();
                             console.log('Backend response:', data);
+                            chrome.runtime.sendMessage({ action: 'relatedArticles', articles: data.articles });
                         } else {
                             console.error('Failed to send data to backend');
                         }

@@ -101,7 +101,7 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
 
         # Print the response status and content for debugging
         print(f"Response Status Code: {response.status_code}")
-        print(f"Response Content: {response.text}")
+        # print(f"Response Content: {response.text}")
 
         if response.status_code != 200:
             raise HTTPException(
@@ -110,8 +110,8 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
             )
 
         # Parse the articles from the response
-        articles = response.json().get("articles", [])
-        return {"status": "success", "related_articles": articles}
+        articles = response.json().get("articles", {})
+        return {"articles": articles}
 
     except Exception as e:
         # Print the exact exception and traceback for better debugging

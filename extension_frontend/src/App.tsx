@@ -14,12 +14,7 @@ interface BiasData {
 }
 
 // Define the structure of related articles
-interface RelatedArticle {
-  DocumentIdentifier: string;
-  Themes: string;
-  SourceCommonName: string;
-  DATE: string;
-}
+
 
 // Function to map biases to colors
 const getBiasColor = (bias: string) => {
@@ -47,7 +42,7 @@ const getBiasColor = (bias: string) => {
 
 function App() {
   const [biasData, setBiasData] = useState<BiasData | string>('Loading...');
-  const [relatedArticles, setRelatedArticles] = useState<RelatedArticle[]>([]);
+  const [relatedArticles, setRelatedArticles] = useState([]);
   const [publication, setPublication] = useState('');
   const [logo, setLogo] = useState('');
   const [activeTab, setActiveTab] = useState<'bias' | 'articles'>('bias'); 
@@ -70,6 +65,7 @@ function App() {
 
       if (message.action === 'relatedArticles') {
         setRelatedArticles(message.articles || []);
+        console.log("Related articles:" + relatedArticles);
       }
     });
   }, []);
@@ -135,9 +131,7 @@ function App() {
                 <ul className="related-articles-list">
                   {relatedArticles.map((article, index) => (
                     <li key={index}>
-                      <a href={article.DocumentIdentifier} target="_blank" rel="noopener noreferrer">
-                        {article.SourceCommonName} - {new Date(article.DATE).toLocaleDateString()}
-                      </a>
+                      <a href={article['link']} target="_blank" rel="noopener noreferrer" className="article-link">Read Article</a>
                     </li>
                   ))}
                 </ul>
