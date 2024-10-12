@@ -13,12 +13,12 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import ssl
 
+# Disable SSL verification temporarily for NLTK
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # Ensure that the necessary NLTK data is downloaded
 nltk.download("punkt")
 nltk.download("stopwords")
-nltk.download("punkt_tab")
 
 # Load environment variables
 load_dotenv()
@@ -41,48 +41,65 @@ class TitleAndTextRequest(BaseModel):
 
 
 # Function to extract keywords from text using NLTK
-def extract_keywords(text: str, max_keywords: int = 5):
-    """Extract keywords from the text using NLTK's stopwords and basic filtering."""
-    # Load NLTK's list of English stopwords
+def extract_keywords(
+    title: str,
+    inner_text: str,
+    max_title_keywords: int = 5,
+    max_text_keywords: int = 10,
+):
+    """Extract and combine keywords from title and inner text."""
+
+    # List of publisher names to filter out
+    PUBLISHER_BLACKLIST = ["CNN", "Fox", "BBC", "Reuters", "Bloomberg", "Al Jazeera"]
+
+    # Create a set of stopwords
     stop_words = set(stopwords.words("english"))
 
-    # Tokenize the text into individual words
-    words = word_tokenize(text.lower())  # Convert to lowercase and tokenize
+    # Tokenize the title and inner text
+    title_tokens = word_tokenize(title.lower())
+    text_tokens = word_tokenize(inner_text.lower())
 
-    # Filter out stopwords and non-alphanumeric words
-    filtered_words = [
-        word for word in words if word.isalnum() and word not in stop_words
+    # Filter out stopwords, punctuation, and publisher names from the title
+    filtered_title_keywords = [
+        word
+        for word in title_tokens
+        if word.isalnum() and word not in stop_words and word not in PUBLISHER_BLACKLIST
     ]
 
-    # Select up to `max_keywords` most frequent keywords
-    keyword_freq = {}
-    for word in filtered_words:
-        if word in keyword_freq:
-            keyword_freq[word] += 1
-        else:
-            keyword_freq[word] = 1
+    # Filter out stopwords, punctuation, and publisher names from the inner text
+    filtered_text_keywords = [
+        word
+        for word in text_tokens[:1000]
+        if word.isalnum() and word not in stop_words and word not in PUBLISHER_BLACKLIST
+    ]
 
-    # Sort keywords by frequency and select the top `max_keywords`
-    sorted_keywords = sorted(
-        keyword_freq.items(), key=lambda item: item[1], reverse=True
+    # Combine title keywords into an exact match query
+    title_query = " ".join(
+        f'"{word}"' for word in filtered_title_keywords[:max_title_keywords]
     )
-    top_keywords = [keyword for keyword, _ in sorted_keywords[:max_keywords]]
 
-    # Join the keywords into a single string separated by spaces for the query
-    return " ".join(top_keywords)
+    # Combine inner text keywords into an exact match query
+    text_query = " ".join(
+        f'"{word}"' for word in filtered_text_keywords[:max_text_keywords]
+    )
+
+    # Return query for both title OR inner text using Boolean OR
+    return f"({title_query}) OR ({text_query})"
 
 
 # Route to get related articles from NewsCatcher API
 @app.post("/related_articles_by_text")
 async def get_related_articles_by_text(request: TitleAndTextRequest):
+    if not NEWSCATCHER_API_KEY:
+        raise HTTPException(status_code=500, detail="API Key not found")
 
-    # Extract keywords from the title (excluding filler words)
-    query = extract_keywords(request.title, max_keywords=10)
+    # Extract keywords from both title and inner text
+    query = extract_keywords(request.title, request.innerText)
     print(f"Extracted Keywords for Query: {query}")
 
     # Define the query parameters for the NewsCatcher API
     query_params = {
-        "q": query,  # Use extracted keywords for the query
+        "q": query,  # Use the extracted keywords for the query
         "lang": "en",  # Specify the language as English
         "sort_by": "relevancy",  # Sort by relevancy for best matches
     }
@@ -101,7 +118,6 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
 
         # Print the response status and content for debugging
         print(f"Response Status Code: {response.status_code}")
-        # print(f"Response Content: {response.text}")
 
         if response.status_code != 200:
             raise HTTPException(
@@ -110,7 +126,7 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
             )
 
         # Parse the articles from the response
-        articles = response.json().get("articles", {})
+        articles = response.json().get("articles", [])
         return {"articles": articles}
 
     except Exception as e:

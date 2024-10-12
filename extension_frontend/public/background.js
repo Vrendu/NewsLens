@@ -87,7 +87,7 @@ function isArticleUrl(url) {
 }
 
 
-// Function to handle fetching related articles for the active tab
+// Function to handle fetching related articles for the active tab in background.js
 async function handleFetchRelatedArticles() {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const activeTab = tabs[0];
@@ -131,6 +131,7 @@ async function handleFetchRelatedArticles() {
                             console.log(`Successfully sent title and innerText to backend: ${title}`);
                             const data = await response.json();
                             console.log('Backend response:', data);
+                            console.log("summary: ", data.articles[0].summary);
                             chrome.runtime.sendMessage({ action: 'relatedArticles', articles: data.articles });
                         } else {
                             console.error('Failed to send data to backend');
