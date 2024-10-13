@@ -1,5 +1,3 @@
-# backend/main.py
-
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from mbfc import update_mbfc_data, check_bias_data
@@ -8,17 +6,11 @@ import os
 import requests
 from dotenv import load_dotenv
 from urllib.parse import urlencode
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
+from rake_nltk import Rake
 import ssl
 
 # Disable SSL verification temporarily for NLTK
 ssl._create_default_https_context = ssl._create_unverified_context
-
-# Ensure that the necessary NLTK data is downloaded
-nltk.download("punkt")
-nltk.download("stopwords")
 
 # Load environment variables
 load_dotenv()
@@ -40,51 +32,24 @@ class TitleAndTextRequest(BaseModel):
     innerText: str
 
 
-# Function to extract keywords from text using NLTK
-def extract_keywords(
-    title: str,
-    inner_text: str,
-    max_title_keywords: int = 5,
-    max_text_keywords: int = 10,
-):
-    """Extract and combine keywords from title and inner text."""
+# Initialize RAKE with NLTK stopwords
+rake = Rake()
 
-    # List of publisher names to filter out
-    PUBLISHER_BLACKLIST = ["CNN", "Fox", "BBC", "Reuters", "Bloomberg", "Al Jazeera"]
 
-    # Create a set of stopwords
-    stop_words = set(stopwords.words("english"))
+# Function to extract keywords using RAKE
+def extract_keywords_rake(title: str, inner_text: str, max_keywords: int = 15):
+    """Extract keywords from title and inner text using RAKE."""
+    # Combine title and inner text
+    combined_text = f"{title} "
 
-    # Tokenize the title and inner text
-    title_tokens = word_tokenize(title.lower())
-    text_tokens = word_tokenize(inner_text.lower())
+    # Use RAKE to extract keywords
+    rake.extract_keywords_from_text(combined_text)
 
-    # Filter out stopwords, punctuation, and publisher names from the title
-    filtered_title_keywords = [
-        word
-        for word in title_tokens
-        if word.isalnum() and word not in stop_words and word not in PUBLISHER_BLACKLIST
-    ]
+    # Get ranked phrases (sorted by relevance)
+    keywords = rake.get_ranked_phrases()
 
-    # Filter out stopwords, punctuation, and publisher names from the inner text
-    filtered_text_keywords = [
-        word
-        for word in text_tokens[:1000]
-        if word.isalnum() and word not in stop_words and word not in PUBLISHER_BLACKLIST
-    ]
-
-    # Combine title keywords into an exact match query
-    title_query = " ".join(
-        f'"{word}"' for word in filtered_title_keywords[:max_title_keywords]
-    )
-
-    # Combine inner text keywords into an exact match query
-    text_query = " ".join(
-        f'"{word}"' for word in filtered_text_keywords[:max_text_keywords]
-    )
-
-    # Return query for both title OR inner text using Boolean OR
-    return f"({title_query}) OR ({text_query})"
+    # Limit the number of keywords to the max specified
+    return keywords[:max_keywords]
 
 
 # Route to get related articles from NewsCatcher API
@@ -93,9 +58,12 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
     if not NEWSCATCHER_API_KEY:
         raise HTTPException(status_code=500, detail="API Key not found")
 
-    # Extract keywords from both title and inner text
-    query = extract_keywords(request.title, request.innerText)
-    print(f"Extracted Keywords for Query: {query}")
+    # Extract keywords using RAKE
+    keywords = extract_keywords_rake(request.title, request.innerText)
+    print(f"Extracted Keywords for Query: {keywords}")
+
+    # Join keywords to form a query string
+    query = " OR ".join([f'"{keyword}"' for keyword in keywords])
 
     # Define the query parameters for the NewsCatcher API
     query_params = {
