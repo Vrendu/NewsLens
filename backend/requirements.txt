@@ -1,0 +1,5 @@
+dotenv
+fastapi
+uvicorn
+nltk
+rake-nltk
