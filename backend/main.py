@@ -6,17 +6,10 @@ import os
 import requests
 from dotenv import load_dotenv
 from urllib.parse import urlencode
-from rake_nltk import Rake
-import ssl
-import re
+import spacy
 
-# Import sumy summarization modules
-from sumy.parsers.plaintext import PlaintextParser
-from sumy.nlp.tokenizers import Tokenizer
-from sumy.summarizers.lsa import LsaSummarizer
-
-# Disable SSL verification temporarily for NLTK
-ssl._create_default_https_context = ssl._create_unverified_context
+# Load spaCy model
+nlp = spacy.load("en_core_web_sm")
 
 # Load environment variables
 load_dotenv()
@@ -25,8 +18,8 @@ load_dotenv()
 app = FastAPI()
 
 # Retrieve API Key from environment variables
+NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 NEWSCATCHER_API_KEY = os.getenv("NEWSCATCHER_API_KEY")
-
 
 # Define Pydantic models for requests
 class DomainRequest(BaseModel):
@@ -38,46 +31,21 @@ class TitleAndTextRequest(BaseModel):
     innerText: str
 
 
-# Initialize RAKE with NLTK stopwords
-rake = Rake()
-
-
-# Function to summarize the inner text
-def summarize_text(text, sentences_count=5):
-    """Summarize the provided text to retain only the most important parts."""
-    parser = PlaintextParser.from_string(text, Tokenizer("english"))
-    summarizer = LsaSummarizer()
-    summary = summarizer(parser.document, sentences_count)
-    return " ".join([str(sentence) for sentence in summary])
-
-
-# Function to extract keywords using RAKE
-def extract_keywords_rake(title: str, inner_text: str, max_keywords: int = 20):
-    """Summarize inner text and extract keywords from title and summarized text using RAKE."""
-    # Summarize the inner text first
-    summarized_text = summarize_text(inner_text, sentences_count=30)
-    
-    # Combine title and summarized inner text
-    combined_text = f"{title} {summarized_text}"
-
-    # Use RAKE to extract keywords
-    rake.extract_keywords_from_text(combined_text)
-
-    # Get ranked phrases (sorted by relevance)
-    keywords = rake.get_ranked_phrases()
-
-    # Limit the number of keywords to the max specified
+# Simplified function to extract keywords from the title (excluding stopwords)
+def extract_keywords_from_title(title: str, max_keywords=10):
+    doc = nlp(title)
+    keywords = [token.text for token in doc if not token.is_stop and token.is_alpha]
     return keywords[:max_keywords]
 
 
-# Route to get related articles from NewsCatcher API
+# Route to get related articles from News API
 @app.post("/related_articles_by_text")
 async def get_related_articles_by_text(request: TitleAndTextRequest):
-    if not NEWSCATCHER_API_KEY:
+    if not NEWS_API_KEY:
         raise HTTPException(status_code=500, detail="API Key not found")
 
-    # Extract keywords using RAKE
-    keywords = extract_keywords_rake(request.title, request.innerText)
+    # Extract keywords from title
+    keywords = extract_keywords_from_title(request.title)
 
     # Connect to the database and fetch all publication names
     conn = psycopg2.connect(os.getenv("DATABASE_URL"))
@@ -93,38 +61,36 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
     cursor.close()
     conn.close()
 
-    # Function to check if any publication name is a substring of the keyword
-    def contains_publication_name(keyword):
-        for pub_name in publication_names_to_remove:
-            if re.search(rf"\b{re.escape(pub_name)}\b", keyword.lower()):
-                return True
-        return False
-
     # Remove keywords that contain any publication names
     filtered_keywords = [
-        keyword for keyword in keywords if not contains_publication_name(keyword)
+        keyword
+        for keyword in keywords
+        if keyword.lower() not in publication_names_to_remove
     ]
     print(f"Extracted Keywords for Query: {filtered_keywords}")
     print("Number of keywords:", len(filtered_keywords))
 
     # Join keywords to form a query string
-    query = " OR ".join([f'"{keyword}"' for keyword in filtered_keywords])
+    query = " OR ".join(filtered_keywords)
 
-    # Define the query parameters for the NewsCatcher API
+    # Define the query parameters for the News API
     query_params = {
         "q": query,  # Use the extracted keywords for the query
-        "lang": "en",  # Specify the language as English
-        "sort_by": "relevancy",  # Sort by relevancy for best matches
+        "language": "en",  # Specify the language as English
+        "sortBy": "relevancy",  # Sort by relevancy for best matches
+        #"sort_by": "relevancy",  # Sort by relevancy for best matches
     }
 
     # Encode the query parameters to ensure proper URL formatting
     encoded_params = urlencode(query_params)
 
     # Construct the full URL for the API request
-    api_url = f"https://api.newscatcherapi.com/v2/search?{encoded_params}"
+    api_url = f"https://newsapi.org/v2/everything?{encoded_params}"
+    #api_url = f"https://api.newscatcherapi.com/v2/search?q={encoded_params}"
 
-    # Make a request to the NewsCatcher API
-    headers = {"x-api-key": NEWSCATCHER_API_KEY}
+    # Make a request to the News API
+    headers = {"X-Api-Key": NEWS_API_KEY}
+    #headers = {"X-Api-Key": NEWSCATCHER_API_KEY}
 
     try:
         response = requests.get(api_url, headers=headers)
