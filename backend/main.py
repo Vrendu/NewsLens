@@ -8,6 +8,12 @@ from dotenv import load_dotenv
 from urllib.parse import urlencode
 from rake_nltk import Rake
 import ssl
+import re
+
+# Import sumy summarization modules
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
 
 # Disable SSL verification temporarily for NLTK
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -36,11 +42,23 @@ class TitleAndTextRequest(BaseModel):
 rake = Rake()
 
 
+# Function to summarize the inner text
+def summarize_text(text, sentences_count=5):
+    """Summarize the provided text to retain only the most important parts."""
+    parser = PlaintextParser.from_string(text, Tokenizer("english"))
+    summarizer = LsaSummarizer()
+    summary = summarizer(parser.document, sentences_count)
+    return " ".join([str(sentence) for sentence in summary])
+
+
 # Function to extract keywords using RAKE
-def extract_keywords_rake(title: str, inner_text: str, max_keywords: int = 15):
-    """Extract keywords from title and inner text using RAKE."""
-    # Combine title and inner text
-    combined_text = f"{title} "
+def extract_keywords_rake(title: str, inner_text: str, max_keywords: int = 20):
+    """Summarize inner text and extract keywords from title and summarized text using RAKE."""
+    # Summarize the inner text first
+    summarized_text = summarize_text(inner_text, sentences_count=30)
+    
+    # Combine title and summarized inner text
+    combined_text = f"{title} {summarized_text}"
 
     # Use RAKE to extract keywords
     rake.extract_keywords_from_text(combined_text)
@@ -60,10 +78,37 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
 
     # Extract keywords using RAKE
     keywords = extract_keywords_rake(request.title, request.innerText)
-    print(f"Extracted Keywords for Query: {keywords}")
+
+    # Connect to the database and fetch all publication names
+    conn = psycopg2.connect(os.getenv("DATABASE_URL"))
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT name FROM mbfc_data
+        """
+    )
+    publication_names_to_remove = [
+        row[0].lower() for row in cursor.fetchall()
+    ]  # Convert to lowercase for comparison
+    cursor.close()
+    conn.close()
+
+    # Function to check if any publication name is a substring of the keyword
+    def contains_publication_name(keyword):
+        for pub_name in publication_names_to_remove:
+            if re.search(rf"\b{re.escape(pub_name)}\b", keyword.lower()):
+                return True
+        return False
+
+    # Remove keywords that contain any publication names
+    filtered_keywords = [
+        keyword for keyword in keywords if not contains_publication_name(keyword)
+    ]
+    print(f"Extracted Keywords for Query: {filtered_keywords}")
+    print("Number of keywords:", len(filtered_keywords))
 
     # Join keywords to form a query string
-    query = " OR ".join([f'"{keyword}"' for keyword in keywords])
+    query = " OR ".join([f'"{keyword}"' for keyword in filtered_keywords])
 
     # Define the query parameters for the NewsCatcher API
     query_params = {
@@ -95,6 +140,7 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
 
         # Parse the articles from the response
         articles = response.json().get("articles", [])
+        print(len(articles), "articles fetched")
         return {"articles": articles}
 
     except Exception as e:

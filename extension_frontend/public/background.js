@@ -110,7 +110,7 @@ async function handleFetchRelatedArticles() {
                 target: { tabId: activeTabId },
                 func: () => ({
                     title: document.title,
-                    innerText: document.body.innerText.slice(0, 10000),  
+                    innerText: document.querySelector('article')?.innerText || document.querySelector('div.content')?.innerText || document.body.innerText.slice(0, 10000),  
                 }),
             },
             async (results) => {
@@ -131,7 +131,7 @@ async function handleFetchRelatedArticles() {
                             console.log(`Successfully sent title and innerText to backend: ${title}`);
                             const data = await response.json();
                             console.log('Backend response:', data);
-                            console.log("summary: ", data.articles[0].summary);
+                           // console.log("summary: ", data.articles[0].summary);
                             chrome.runtime.sendMessage({ action: 'relatedArticles', articles: data.articles });
                         } else {
                             console.error('Failed to send data to backend');
