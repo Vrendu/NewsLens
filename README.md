@@ -25,6 +25,9 @@ Go to chrome://extensions/ in your browser, and toggle to Developer Mode
 Click Load Unpacked, and select the "dist" folder within extension_frontend
 
 in another terminal, cd into backend and start virtual environment with command: source venv/bin/activate
+
+install dependencies with pip install -r requirements.txt
+
 start server with command: uvicorn main:app --reload
 
 
