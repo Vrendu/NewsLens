@@ -18,8 +18,8 @@ load_dotenv()
 app = FastAPI()
 
 # Retrieve API Key from environment variables
-NEWS_API_KEY = os.getenv("NEWS_API_KEY")
-NEWSCATCHER_API_KEY = os.getenv("NEWSCATCHER_API_KEY")
+MEDIASTACK_API_KEY = os.getenv("MEDIASTACK_API_KEY")
+
 
 # Define Pydantic models for requests
 class DomainRequest(BaseModel):
@@ -38,14 +38,14 @@ def extract_keywords_from_title(title: str, max_keywords=10):
     return keywords[:max_keywords]
 
 
-# Route to get related articles from News API
+# Route to get related articles from MediaStack API
 @app.post("/related_articles_by_text")
 async def get_related_articles_by_text(request: TitleAndTextRequest):
-    if not NEWS_API_KEY:
+    if not MEDIASTACK_API_KEY:
         raise HTTPException(status_code=500, detail="API Key not found")
 
     # Extract keywords from title
-    keywords = extract_keywords_from_title(request.title)
+    keywords = extract_keywords_from_title(request.innerText)
 
     # Connect to the database and fetch all publication names
     conn = psycopg2.connect(os.getenv("DATABASE_URL"))
@@ -71,29 +71,26 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
     print("Number of keywords:", len(filtered_keywords))
 
     # Join keywords to form a query string
-    query = " OR ".join(filtered_keywords)
+    query = ", ".join(
+        filtered_keywords
+    )  # Join with comma as MediaStack supports comma-separated keywords
 
-    # Define the query parameters for the News API
+    # Define the query parameters for the MediaStack API
     query_params = {
-        "q": query,  # Use the extracted keywords for the query
-        "language": "en",  # Specify the language as English
-        "sortBy": "relevancy",  # Sort by relevancy for best matches
-        #"sort_by": "relevancy",  # Sort by relevancy for best matches
+        "access_key": MEDIASTACK_API_KEY,  # Your MediaStack API key
+        "keywords": query,  # Use the extracted keywords for the query
+        "languages": "en",  # Optional: specify language as English
+        "categories": "general",  # Optional: filter by news category
     }
 
     # Encode the query parameters to ensure proper URL formatting
     encoded_params = urlencode(query_params)
 
-    # Construct the full URL for the API request
-    api_url = f"https://newsapi.org/v2/everything?{encoded_params}"
-    #api_url = f"https://api.newscatcherapi.com/v2/search?q={encoded_params}"
-
-    # Make a request to the News API
-    headers = {"X-Api-Key": NEWS_API_KEY}
-    #headers = {"X-Api-Key": NEWSCATCHER_API_KEY}
+    # Construct the full URL for the API request to MediaStack
+    api_url = f"http://api.mediastack.com/v1/news?{encoded_params}"
 
     try:
-        response = requests.get(api_url, headers=headers)
+        response = requests.get(api_url)
 
         # Print the response status and content for debugging
         print(f"Response Status Code: {response.status_code}")
@@ -105,7 +102,9 @@ async def get_related_articles_by_text(request: TitleAndTextRequest):
             )
 
         # Parse the articles from the response
-        articles = response.json().get("articles", [])
+        articles = response.json().get(
+            "data", []
+        )  # MediaStack uses "data" instead of "articles"
         print(len(articles), "articles fetched")
         return {"articles": articles}
 
